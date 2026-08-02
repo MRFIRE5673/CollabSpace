@@ -17,7 +17,7 @@ function setupDatabase(): void {
         `name` VARCHAR(100) NOT NULL,
         `email` VARCHAR(150) NOT NULL UNIQUE,
         `password` VARCHAR(255) NOT NULL,
-        `role` ENUM('admin','manager','member') NOT NULL DEFAULT 'member',
+        `role` ENUM('admin','manager','member','viewer') NOT NULL DEFAULT 'member',
         `avatar` VARCHAR(255) DEFAULT NULL,
         `bio` TEXT DEFAULT NULL,
         `phone` VARCHAR(30) DEFAULT NULL,
@@ -175,13 +175,14 @@ function seedData(PDO $db): void {
         return;
     }
 
-    // Seed Users
+    // Seed Users — 4 demo roles
     $users = [
-        ['Admin User',        'admin@workspace.com',  password_hash('password123', PASSWORD_DEFAULT), 'admin'],
-        ['Sarah Johnson',     'pm@workspace.com',     password_hash('password123', PASSWORD_DEFAULT), 'manager'],
-        ['Mike Chen',         'member@workspace.com', password_hash('password123', PASSWORD_DEFAULT), 'member'],
-        ['Emily Davis',       'emily@workspace.com',  password_hash('password123', PASSWORD_DEFAULT), 'member'],
-        ['James Wilson',      'james@workspace.com',  password_hash('password123', PASSWORD_DEFAULT), 'member'],
+        ['Admin User',        'admin@workspace.com',   password_hash('password123', PASSWORD_DEFAULT), 'admin'],
+        ['Sarah Johnson',     'pm@workspace.com',      password_hash('password123', PASSWORD_DEFAULT), 'manager'],
+        ['Mike Chen',         'member@workspace.com',  password_hash('password123', PASSWORD_DEFAULT), 'member'],
+        ['Emily Davis',       'emily@workspace.com',   password_hash('password123', PASSWORD_DEFAULT), 'member'],
+        ['James Wilson',      'james@workspace.com',   password_hash('password123', PASSWORD_DEFAULT), 'member'],
+        ['Viewer Guest',      'viewer@workspace.com',  password_hash('password123', PASSWORD_DEFAULT), 'viewer'],
     ];
     $stmt = $db->prepare("INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)");
     foreach ($users as $u) $stmt->execute($u);
@@ -253,9 +254,11 @@ function seedData(PDO $db): void {
 
     echo "✅ Seed data inserted successfully.\n";
     echo "\n🎉 Setup complete! You can now visit the application.\n";
-    echo "   Admin: admin@workspace.com / password123\n";
-    echo "   Manager: pm@workspace.com / password123\n";
-    echo "   Member: member@workspace.com / password123\n";
+    echo "\n📋 Demo Login Credentials (password: password123)\n";
+    echo "   🔴 Admin   : admin@workspace.com   → Full dashboard (dashboard.php)\n";
+    echo "   🟢 Manager : pm@workspace.com      → Manager view  (manager_dashboard.php)\n";
+    echo "   🔵 Member  : member@workspace.com  → Member board  (member_dashboard.php)\n";
+    echo "   ⚪ Viewer  : viewer@workspace.com  → Viewer portal (viewer_dashboard.php)\n";
 }
 
 // Run setup

@@ -1,8 +1,10 @@
 <?php
-// ─── Dashboard ───────────────────────────────────────────────
+// ─── Dashboard (Admin Only) ──────────────────────────────────
 $page_title = 'Dashboard';
 require_once __DIR__ . '/includes/auth.php';
 require_login();
+// Non-admins are redirected to their own role page
+if (!is_admin()) { redirect(get_role_redirect($_SESSION['user_role'] ?? 'member')); }
 $user = current_user();
 $uid  = $user['id'];
 $db   = getDB();

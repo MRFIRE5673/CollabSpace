@@ -43,6 +43,18 @@ function has_role(string ...$roles): bool {
 function is_admin(): bool    { return has_role('admin'); }
 function is_manager(): bool  { return has_role('admin', 'manager'); }
 function is_member(): bool   { return has_role('admin', 'manager', 'member'); }
+function is_viewer(): bool   { return has_role('admin', 'manager', 'member', 'viewer'); }
+
+// ─── Role-Based Redirect ──────────────────────────────────
+function get_role_redirect(string $role): string {
+    return match($role) {
+        'admin'   => 'dashboard.php',
+        'manager' => 'manager_dashboard.php',
+        'member'  => 'member_dashboard.php',
+        'viewer'  => 'viewer_dashboard.php',
+        default   => 'dashboard.php',
+    };
+}
 
 // ─── Login / Logout ───────────────────────────────────────
 function attempt_login(string $email, string $password): array {
@@ -64,7 +76,7 @@ function attempt_login(string $email, string $password): array {
     $_SESSION['user_role']   = $user['role'];
     $_SESSION['user_avatar'] = $user['avatar'];
 
-    return ['success' => true, 'role' => $user['role']];
+    return ['success' => true, 'role' => $user['role'], 'redirect' => get_role_redirect($user['role'])];
 }
 
 function attempt_register(string $name, string $email, string $password, string $role = 'member'): array {
