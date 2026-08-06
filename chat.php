@@ -305,11 +305,11 @@ async function switchRoom(type, id, name) {
   lastMsgId = 0;
 
   // Update URL without page reload
-  window.history.pushState({}, '', `chat.php?type=\${type}&id=\${id}`);
+  window.history.pushState({}, '', `chat.php?type=${type}&id=${id}`);
 
   // Update active state in left sidebar
   document.querySelectorAll('.chat-room-item').forEach(el => el.classList.remove('active'));
-  const activeItem = document.getElementById(`room-\${type}-\${id}`);
+  const activeItem = document.getElementById(`room-${type}-${id}`);
   if (activeItem) activeItem.classList.add('active');
 
   // Update chat header details
@@ -319,7 +319,7 @@ async function switchRoom(type, id, name) {
   const avatarBox = document.getElementById('room-avatar-box');
   const initials = (name || 'U').substring(0, 2).toUpperCase();
   const radius = type === 'project' ? 'rounded-2' : 'rounded-circle';
-  avatarBox.innerHTML = `<div class="\${radius} d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style="width:38px;height:38px;font-size:.75rem;background:linear-gradient(135deg,#4f46e5,#7c3aed);">\${initials}</div>`;
+  avatarBox.innerHTML = `<div class="${radius} d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style="width:38px;height:38px;font-size:.75rem;background:linear-gradient(135deg,#4f46e5,#7c3aed);">${initials}</div>`;
 
   // Update hidden form fields
   document.getElementById('input-room-type').value = type;
@@ -335,9 +335,9 @@ async function switchRoom(type, id, name) {
   `;
 
   // Fetch room messages via AJAX
-  let url = `api/chat.php?action=fetch&after_id=0&room_type=\${type}`;
-  if (type === 'direct') url += `&receiver_id=\${id}`;
-  else url += `&project_id=\${id}`;
+  let url = `api/chat.php?action=fetch&after_id=0&room_type=${type}`;
+  if (type === 'direct') url += `&receiver_id=${id}`;
+  else url += `&project_id=${id}`;
 
   try {
     const res = await fetch(url);
@@ -421,26 +421,26 @@ function appendMessageUI(m) {
   
   let fileHtml = '';
   if (m.file_path) {
-    const fileUrl = `raw_file.php?chat=1&file=\${encodeURIComponent(m.file_path)}`;
+    const fileUrl = `raw_file.php?chat=1&file=${encodeURIComponent(m.file_path)}`;
     fileHtml = `<div class="chat-attachment d-flex align-items-center gap-2 mt-1">
-      <a href="\${fileUrl}" download="\${escapeHtml(m.file_name || m.file_path)}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
-        <i class="bi bi-download me-1"></i>\${escapeHtml(m.file_name || 'Download')}
+      <a href="${fileUrl}" download="${escapeHtml(m.file_name || m.file_path)}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+        <i class="bi bi-download me-1"></i>${escapeHtml(m.file_name || 'Download')}
       </a>
-      <a href="\${fileUrl}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
+      <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
         <i class="bi bi-eye me-1"></i>View
       </a>
     </div>`;
   }
   
   div.innerHTML = `
-    <div class="chat-avatar">\${(m.sender_name || 'U').substring(0,2).toUpperCase()}</div>
+    <div class="chat-avatar">${(m.sender_name || 'U').substring(0,2).toUpperCase()}</div>
     <div class="chat-bubble">
       <div class="chat-meta">
-        <span class="fw-semibold me-2">\${escapeHtml(m.sender_name || 'User')}</span>
-        <span>\${m.time_ago || 'just now'}</span>
+        <span class="fw-semibold me-2">${escapeHtml(m.sender_name || 'User')}</span>
+        <span>${m.time_ago || 'just now'}</span>
       </div>
-      \${m.message ? `<div class="chat-text">\${escapeHtml(m.message).replace(/\\n/g, '<br>')}</div>` : ''}
-      \${fileHtml}
+      ${m.message ? `<div class="chat-text">${escapeHtml(m.message).replace(/\n/g, '<br>')}</div>` : ''}
+      ${fileHtml}
     </div>
   `;
   
@@ -464,11 +464,11 @@ async function pollNewMessages() {
   if (!currentRoomId) return;
   if (isSwitching) return; // Do not poll while switching rooms
   try {
-    let url = `api/chat.php?action=fetch&after_id=\${lastMsgId}&room_type=\${currentRoomType}`;
+    let url = `api/chat.php?action=fetch&after_id=${lastMsgId}&room_type=${currentRoomType}`;
     if (currentRoomType === 'direct') {
-      url += `&receiver_id=\${currentRoomId}`;
+      url += `&receiver_id=${currentRoomId}`;
     } else {
-      url += `&project_id=\${currentRoomId}`;
+      url += `&project_id=${currentRoomId}`;
     }
     
     const res = await fetch(url);
@@ -512,7 +512,7 @@ async function handleAddContact(e) {
 
     if (data.success && data.contact) {
       const c = data.contact;
-      msgBox.innerHTML = `<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle-fill me-1"></i>Connected with <strong>\${escapeHtml(c.name)}</strong>!</div>`;
+      msgBox.innerHTML = `<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle-fill me-1"></i>Connected with <strong>${escapeHtml(c.name)}</strong>!</div>`;
       input.value = '';
 
       // Remove no contacts placeholder
@@ -521,21 +521,21 @@ async function handleAddContact(e) {
 
       // Append friend to Left Sidebar Direct Messages list if not exists
       const listContainer = document.getElementById('contacts-list-container');
-      if (!document.getElementById(`room-direct-\${c.id}`)) {
+      if (!document.getElementById(`room-direct-${c.id}`)) {
         const item = document.createElement('div');
         item.onclick = () => switchRoom('direct', c.id, c.name);
         item.className = 'chat-room-item text-decoration-none text-body';
-        item.id = `room-direct-\${c.id}`;
+        item.id = `room-direct-${c.id}`;
         item.innerHTML = `
           <div class="position-relative">
             <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0" style="width:36px;height:36px;font-size:.72rem;background:#7c3aed;">
-              \${c.name.substring(0,2).toUpperCase()}
+              ${c.name.substring(0,2).toUpperCase()}
             </div>
-            <span class="position-absolute bottom-0 end-0 online-indicator \${c.status === 'online' ? '' : 'offline-indicator'}"></span>
+            <span class="position-absolute bottom-0 end-0 online-indicator ${c.status === 'online' ? '' : 'offline-indicator'}"></span>
           </div>
           <div class="overflow-hidden">
-            <div class="fw-semibold small text-truncate">\${escapeHtml(c.name)}</div>
-            <div class="x-small \${c.status === 'online' ? 'text-success' : 'text-muted'}">\${c.status === 'online' ? 'Online' : 'Offline'}</div>
+            <div class="fw-semibold small text-truncate">${escapeHtml(c.name)}</div>
+            <div class="x-small ${c.status === 'online' ? 'text-success' : 'text-muted'}">${c.status === 'online' ? 'Online' : 'Offline'}</div>
           </div>
         `;
         listContainer.appendChild(item);
@@ -549,7 +549,7 @@ async function handleAddContact(e) {
       }, 800);
 
     } else {
-      msgBox.innerHTML = `<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i>\${data.message || 'User not found.'}</div>`;
+      msgBox.innerHTML = `<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i>${data.message || 'User not found.'}</div>`;
     }
   } catch (err) {
     msgBox.innerHTML = `<div class="alert alert-danger py-2 small mb-0">Connection failed. Try again.</div>`;
@@ -571,27 +571,27 @@ if (contactSearchInput) {
     }
     searchTimeout = setTimeout(async () => {
       try {
-        const res = await fetch(`api/contacts.php?action=search&q=\${encodeURIComponent(q)}`);
+        const res = await fetch(`api/contacts.php?action=search&q=${encodeURIComponent(q)}`);
         const users = await res.json();
         if (Array.isArray(users) && users.length > 0) {
           list.innerHTML = users.map(u => `
             <div class="list-group-item d-flex align-items-center justify-content-between p-2">
               <div class="d-flex align-items-center gap-2 overflow-hidden">
                 <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px;height:32px;font-size:.75rem;">
-                  \${u.name.substring(0,2).toUpperCase()}
+                  ${u.name.substring(0,2).toUpperCase()}
                 </div>
                 <div class="overflow-hidden">
-                  <div class="fw-semibold small text-truncate">\${escapeHtml(u.name)}</div>
-                  <div class="x-small text-muted text-truncate">\${escapeHtml(u.email)}</div>
+                  <div class="fw-semibold small text-truncate">${escapeHtml(u.name)}</div>
+                  <div class="x-small text-muted text-truncate">${escapeHtml(u.email)}</div>
                 </div>
               </div>
-              <button onclick="document.getElementById('contact-search-input').value='\${escapeHtml(u.email)}'; handleAddContact(event);" class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size:.72rem;">
+              <button onclick="document.getElementById('contact-search-input').value='${escapeHtml(u.email)}'; handleAddContact(event);" class="btn btn-sm btn-outline-primary py-1 px-2" style="font-size:.72rem;">
                 <i class="bi bi-person-plus me-1"></i>Add
               </button>
             </div>
           `).join('');
         } else {
-          list.innerHTML = `<div class="text-center py-3 text-muted x-small">No users matching "\${escapeHtml(q)}" found.</div>`;
+          list.innerHTML = `<div class="text-center py-3 text-muted x-small">No users matching "${escapeHtml(q)}" found.</div>`;
         }
       } catch (err) {}
     }, 250);

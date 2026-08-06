@@ -387,7 +387,7 @@ async function handleModalUpload(e) {
       status.innerHTML = `<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle-fill me-1"></i>File uploaded successfully!</div>`;
       setTimeout(() => location.reload(), 600);
     } else {
-      status.innerHTML = `<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i>\${data.message || 'Upload failed.'}</div>`;
+      status.innerHTML = `<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i>${data.message || 'Upload failed.'}</div>`;
     }
   } catch (err) {
     status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">Upload error occurred.</div>`;

@@ -158,7 +158,7 @@ include __DIR__ . '/includes/header.php';
           }
 
           tabs.innerHTML = workbook.SheetNames.map((name, i) => `
-            <button class="btn btn-outline-success btn-sm \${i===0?'active':''}" onclick="renderSheet('\${name}'); document.querySelectorAll('#excel-sheet-tabs .btn').forEach(b=>b.classList.remove('active')); this.classList.add('active');">\${name}</button>
+            <button class="btn btn-outline-success btn-sm ${i===0?'active':''}" onclick="renderSheet('${name}'); document.querySelectorAll('#excel-sheet-tabs .btn').forEach(b=>b.classList.remove('active')); this.classList.add('active');">${name}</button>
           `).join('');
 
           renderSheet(workbook.SheetNames[0]);

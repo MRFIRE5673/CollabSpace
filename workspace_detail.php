@@ -339,20 +339,20 @@ async function handleCreateProject(e) {
           <div class="card-body p-4">
             <div class="d-flex align-items-start justify-content-between mb-3">
               <div>
-                <h6 class="fw-bold mb-1"><a href="project_details.php?id=\${p.id}" class="text-decoration-none text-body">\${escapeHtml(p.name)}</a></h6>
+                <h6 class="fw-bold mb-1"><a href="project_details.php?id=${p.id}" class="text-decoration-none text-body">${escapeHtml(p.name)}</a></h6>
                 <div class="d-flex gap-1">
-                  <span class="badge bg-primary bg-opacity-15 text-primary" style="font-size:.65rem;">\${p.status}</span>
-                  <span class="badge bg-info bg-opacity-15 text-info" style="font-size:.65rem;">\${p.priority}</span>
+                  <span class="badge bg-primary" style="font-size:.65rem;">${p.status}</span>
+                  <span class="badge bg-info" style="font-size:.65rem;">${p.priority}</span>
                 </div>
               </div>
-              <a href="project_details.php?id=\${p.id}" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style="font-size:.72rem;">Open</a>
+              <a href="project_details.php?id=${p.id}" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style="font-size:.72rem;">Open</a>
             </div>
             <div class="mb-3">
               <div class="d-flex justify-content-between x-small text-muted mb-1"><span>Progress</span><span>0%</span></div>
               <div class="progress" style="height:6px;border-radius:99px;"><div class="progress-bar bg-primary" style="width:0%"></div></div>
             </div>
             <div class="d-flex justify-content-between x-small text-muted">
-              <span>0 tasks</span><span>by \${escapeHtml(p.manager_name || 'You')}</span>
+              <span>0 tasks</span><span>by ${escapeHtml(p.manager_name || 'You')}</span>
             </div>
           </div>
         </div>`;
@@ -360,7 +360,7 @@ async function handleCreateProject(e) {
       document.getElementById('create-project-form').reset();
       bootstrap.Modal.getInstance(document.getElementById('createProjectModal')).hide();
     } else {
-      status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">\${data.message || 'Create failed.'}</div>`;
+      status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">${data.message || 'Create failed.'}</div>`;
     }
   } catch(err) {
     status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">Connection error.</div>`;
@@ -389,7 +389,7 @@ async function handleInviteMember(e) {
 
     if (data.success && data.user) {
       const u = data.user;
-      status.innerHTML = `<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle-fill me-1"></i>Invited \${escapeHtml(u.name)}!</div>`;
+      status.innerHTML = `<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle-fill me-1"></i>Invited ${escapeHtml(u.name)}!</div>`;
       document.getElementById('invite-query-input').value = '';
 
       if (!document.getElementById('member-row-' + u.id)) {
@@ -398,19 +398,19 @@ async function handleInviteMember(e) {
         row.className = 'd-flex align-items-center gap-3 px-4 py-3 border-bottom';
         row.id = 'member-row-' + u.id;
         row.innerHTML = `
-          <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:38px;height:38px;background:linear-gradient(135deg,#4f46e5,#7c3aed);font-size:.72rem;">\${u.name.substring(0,2).toUpperCase()}</div>
+          <div class="rounded-circle text-white fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:38px;height:38px;background:linear-gradient(135deg,#4f46e5,#7c3aed);font-size:.72rem;">${u.name.substring(0,2).toUpperCase()}</div>
           <div class="flex-grow-1 overflow-hidden">
-            <div class="fw-semibold small text-truncate">\${escapeHtml(u.name)}</div>
-            <div class="x-small text-muted text-truncate">\${escapeHtml(u.email)}</div>
+            <div class="fw-semibold small text-truncate">${escapeHtml(u.name)}</div>
+            <div class="x-small text-muted text-truncate">${escapeHtml(u.email)}</div>
           </div>
-          <span class="badge bg-secondary bg-opacity-15 text-secondary" style="font-size:.62rem;">Member</span>
-          <button class="btn btn-link text-danger p-0" onclick="removeMember(\${WS_ID}, \${u.id}, '\${escapeHtml(u.name)}')">
-            <i class="bi bi-x-lg" style="font-size:.75rem;"></i>
+          <span class="badge bg-info" style="font-size:.65rem;">Member</span>
+          <button class="btn btn-link text-danger p-0 border-0" onclick="removeMember(${WS_ID}, ${u.id}, '${escapeHtml(u.name)}')">
+            <i class="bi bi-x-circle-fill" style="font-size:.9rem;"></i>
           </button>`;
         memberList.appendChild(row);
       }
     } else {
-      status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">\${data.message || 'User not found.'}</div>`;
+      status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">${data.message || 'User not found.'}</div>`;
     }
   } catch {
     status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">Connection error.</div>`;
@@ -420,7 +420,7 @@ async function handleInviteMember(e) {
 
 // Remove Member AJAX
 async function removeMember(wsId, userId, name) {
-  if (!confirm(`Remove \${name} from this workspace?`)) return;
+  if (!confirm(`Remove ${name} from this workspace?`)) return;
   const fd = new FormData();
   fd.append('action', 'remove_member');
   fd.append('workspace_id', wsId);
