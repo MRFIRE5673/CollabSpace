@@ -425,7 +425,10 @@ function appendMessageUI(m) {
   if (m.file_path) {
     const fileUrl = `raw_file.php?chat=1&file=${encodeURIComponent(m.file_path)}`;
     const isMine  = Boolean(m.is_mine);
-    fileHtml = `<div class="chat-attachment d-flex align-items-center gap-2 mt-2 p-2 rounded-3" style="${isMine ? 'background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.25);' : 'background:var(--cs-bg);border:1px solid var(--cs-border);'}">
+    const isImg   = (m.file_path || '').match(/\.(jpg|jpeg|png|gif|webp|svg)$/i);
+    const imgThumb = isImg ? `<div class="mt-2 mb-1"><a href="view_file.php?file=${encodeURIComponent(m.file_path)}"><img src="${fileUrl}" class="img-fluid rounded-3 shadow-sm" style="max-height:200px;max-width:100%;object-fit:cover;" onerror="this.style.display='none';" /></a></div>` : '';
+
+    fileHtml = `${imgThumb}<div class="chat-attachment d-flex align-items-center gap-2 mt-1 p-2 rounded-3" style="${isMine ? 'background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.25);' : 'background:var(--cs-bg);border:1px solid var(--cs-border);'}">
       <a href="${fileUrl}" download="${escapeHtml(m.file_name || m.file_path)}" class="btn btn-sm ${isMine ? 'btn-light text-primary fw-semibold' : 'btn-primary'} py-1 px-2" style="font-size:.78rem;">
         <i class="bi bi-download me-1"></i>${escapeHtml(m.file_name || 'Download')}
       </a>

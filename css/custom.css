@@ -351,14 +351,11 @@ body.sidebar-collapsed .app-main {
   margin-bottom: 28px;
   position: relative;
   overflow: hidden;
-  color: #fff;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #6366f1 100%);
 }
-.page-hero::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: inherit;
-  filter: brightness(.85);
-  z-index: 0;
+.page-hero h1, .page-hero p, .page-hero div, .page-hero span, .page-hero strong {
+  color: #ffffff !important;
 }
 .page-hero > * { position: relative; z-index: 1; }
 .page-hero::after {
@@ -388,10 +385,10 @@ body.sidebar-collapsed .app-main {
 }
 
 /* Hero variants */
-.hero-admin   { background: linear-gradient(135deg, #4338ca 0%, #7c3aed 60%, #5c49e0 100%); color: #fff !important; }
-.hero-manager { background: linear-gradient(135deg, #065f46 0%, #059669 60%, #06b6d4 100%); color: #fff !important; }
-.hero-member  { background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 60%, #38bdf8 100%); color: #fff !important; }
-.hero-project { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #6366f1 100%); color: #fff !important; }
+.hero-admin   { background: linear-gradient(135deg, #4338ca 0%, #7c3aed 60%, #5c49e0 100%) !important; }
+.hero-manager { background: linear-gradient(135deg, #065f46 0%, #059669 60%, #06b6d4 100%) !important; }
+.hero-member  { background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 60%, #38bdf8 100%) !important; }
+.hero-project { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #6366f1 100%) !important; }
 
 .hero-eyebrow {
   font-size: .7rem;
