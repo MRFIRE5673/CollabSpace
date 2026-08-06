@@ -1,17 +1,18 @@
 <?php
-// ─── File Sharing Manager ─────────────────────────────────────
-$page_title = 'File Manager';
+// ─── File Sharing & Storage Center ───────────────────────────
+$page_title = 'File Sharing Manager';
 require_once __DIR__ . '/includes/auth.php';
 require_login();
 $user = current_user();
 $uid  = $user['id'];
 $db   = getDB();
 
-// Handle delete
+// Handle Delete via Form fallback
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_file'])) {
     $fid = (int)$_POST['delete_file'];
-    $f = $db->prepare("SELECT * FROM files WHERE id=?")->execute([$fid]) ?
-        $db->query("SELECT * FROM files WHERE id=$fid")->fetch() : null;
+    $stmt = $db->prepare("SELECT * FROM files WHERE id=?");
+    $stmt->execute([$fid]);
+    $f = $stmt->fetch();
     if ($f && (is_admin() || $f['uploaded_by'] == $uid)) {
         @unlink(UPLOAD_DIR . $f['file_name']);
         $db->prepare("DELETE FROM files WHERE id=?")->execute([$fid]);
@@ -32,11 +33,13 @@ if (!is_admin()) {
 }
 if ($project_filter) { $where .= ' AND f.project_id=?'; $params[] = $project_filter; }
 if ($search) { $where .= ' AND f.original_name LIKE ?'; $params[] = "%$search%"; }
+
 if ($type_filter) {
     $type_exts = [
-        'image' => ['jpg','jpeg','png','gif'],
+        'image'    => ['jpg','jpeg','png','gif','webp','svg'],
         'document' => ['pdf','doc','docx','xls','xlsx','ppt','pptx','txt'],
-        'archive' => ['zip','rar'],
+        'archive'  => ['zip','rar','7z','tar','gz'],
+        'media'    => ['mp4','mp3','wav','avi','mkv'],
     ];
     if (isset($type_exts[$type_filter])) {
         $placeholders = implode(',', array_fill(0, count($type_exts[$type_filter]), '?'));
@@ -58,183 +61,259 @@ $files = $stmt->fetchAll();
 
 $projects_list = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
 
-$file_icons = [
-    'pdf'=>['bi-file-earmark-pdf-fill','danger'],
-    'doc'=>['bi-file-earmark-word-fill','primary'],'docx'=>['bi-file-earmark-word-fill','primary'],
-    'xls'=>['bi-file-earmark-excel-fill','success'],'xlsx'=>['bi-file-earmark-excel-fill','success'],
-    'ppt'=>['bi-file-earmark-ppt-fill','warning'],'pptx'=>['bi-file-earmark-ppt-fill','warning'],
-    'jpg'=>['bi-file-earmark-image-fill','info'],'jpeg'=>['bi-file-earmark-image-fill','info'],
-    'png'=>['bi-file-earmark-image-fill','info'],'gif'=>['bi-file-earmark-image-fill','info'],
-    'zip'=>['bi-file-earmark-zip-fill','secondary'],'rar'=>['bi-file-earmark-zip-fill','secondary'],
-    'txt'=>['bi-file-earmark-text-fill','secondary'],
-    'mp4'=>['bi-file-earmark-play-fill','danger'],'mp3'=>['bi-file-earmark-music-fill','info'],
-];
+// Storage statistics
+$total_size = (float)($db->query("SELECT COALESCE(SUM(file_size),0) FROM files")->fetchColumn());
+$total_files = (int)($db->query("SELECT COUNT(*) FROM files")->fetchColumn());
+$max_storage = 500 * 1024 * 1024; // 500 MB limit
+$storage_pct = $max_storage > 0 ? min(100, round(($total_size / $max_storage) * 100)) : 0;
 
-// Storage stats
-$total_size = $db->query("SELECT COALESCE(SUM(file_size),0) FROM files")->fetchColumn();
-$total_files = $db->query("SELECT COUNT(*) FROM files")->fetchColumn();
+function format_file_size($bytes) {
+    if ($bytes >= 1073741824) return round($bytes / 1073741824, 2) . ' GB';
+    if ($bytes >= 1048576) return round($bytes / 1048576, 1) . ' MB';
+    if ($bytes >= 1024) return round($bytes / 1024, 1) . ' KB';
+    return $bytes . ' B';
+}
+
+function get_file_icon_class($ext) {
+    return match(strtolower($ext)) {
+        'pdf'               => ['icon' => 'bi-file-earmark-pdf-fill', 'color' => 'text-danger'],
+        'doc', 'docx'       => ['icon' => 'bi-file-earmark-word-fill', 'color' => 'text-primary'],
+        'xls', 'xlsx'       => ['icon' => 'bi-file-earmark-excel-fill', 'color' => 'text-success'],
+        'ppt', 'pptx'       => ['icon' => 'bi-file-earmark-ppt-fill', 'color' => 'text-warning'],
+        'jpg','jpeg','png','gif','webp','svg' => ['icon' => 'bi-file-earmark-image-fill', 'color' => 'text-info'],
+        'zip','rar','7z'    => ['icon' => 'bi-file-earmark-zip-fill', 'color' => 'text-secondary'],
+        'mp4','avi','mkv'   => ['icon' => 'bi-file-earmark-play-fill', 'color' => 'text-danger'],
+        'mp3','wav'         => ['icon' => 'bi-file-earmark-music-fill', 'color' => 'text-info'],
+        default             => ['icon' => 'bi-file-earmark-text-fill', 'color' => 'text-muted'],
+    };
+}
 
 include __DIR__ . '/includes/header.php';
 ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 
+<div class="app-content-header py-3 px-4 border-bottom">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div>
+      <h2 class="fw-bold mb-0 fs-4" style="font-family:'Outfit',sans-serif;">
+        <i class="bi bi-folder2-open me-2 text-primary"></i>File Sharing & Storage Hub
+      </h2>
+      <p class="text-muted small mb-0">Upload, share direct links, and collaborate on files securely.</p>
+    </div>
+    <button class="btn btn-primary btn-sm px-3 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadModal" id="upload-file-main-btn">
+      <i class="bi bi-cloud-upload-fill me-1"></i> Upload New File
+    </button>
+  </div>
+</div>
 
-  <div class="app-content-header py-3 px-4 border-bottom">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <div>
-        <h2 class="fw-bold mb-0 fs-5"><i class="bi bi-folder2-open me-2 text-primary"></i>File Manager</h2>
-        <p class="text-muted small mb-0"><?= $total_files ?> file<?= $total_files!=1?'s':'' ?> · <?= round($total_size/1048576,1) ?> MB used</p>
+<div class="app-content p-4">
+
+  <!-- Storage Capacity & Quick Overview Banner -->
+  <div class="card border-0 shadow-sm mb-4" style="border-radius:16px;background:var(--cs-surface);">
+    <div class="card-body p-4">
+      <div class="row align-items-center g-4">
+        <div class="col-md-5">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="rounded-3 bg-primary bg-opacity-10 p-3 text-primary">
+              <i class="bi bi-hdd-network-fill fs-3"></i>
+            </div>
+            <div>
+              <div class="fw-bold fs-5" style="font-family:'Outfit';"><?= format_file_size($total_size) ?> Used</div>
+              <div class="small text-muted"><?= $total_files ?> file<?= $total_files!=1?'s':'' ?> stored total (500 MB Limit)</div>
+            </div>
+          </div>
+          <div class="progress mt-3" style="height: 8px; border-radius: 99px;">
+            <div class="progress-bar bg-primary" role="progressbar" style="width: <?= $storage_pct ?>%;" aria-valuenow="<?= $storage_pct ?>" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+        </div>
+
+        <div class="col-md-7">
+          <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+            <a href="files.php" class="btn btn-sm <?= !$type_filter?'btn-primary':'btn-outline-secondary' ?> rounded-pill px-3">All Files</a>
+            <a href="files.php?type=document" class="btn btn-sm <?= $type_filter==='document'?'btn-primary':'btn-outline-secondary' ?> rounded-pill px-3"><i class="bi bi-file-earmark-text me-1"></i>Documents</a>
+            <a href="files.php?type=image" class="btn btn-sm <?= $type_filter==='image'?'btn-primary':'btn-outline-secondary' ?> rounded-pill px-3"><i class="bi bi-image me-1"></i>Images</a>
+            <a href="files.php?type=archive" class="btn btn-sm <?= $type_filter==='archive'?'btn-primary':'btn-outline-secondary' ?> rounded-pill px-3"><i class="bi bi-file-earmark-zip me-1"></i>Archives</a>
+            <a href="files.php?type=media" class="btn btn-sm <?= $type_filter==='media'?'btn-primary':'btn-outline-secondary' ?> rounded-pill px-3"><i class="bi bi-film me-1"></i>Media</a>
+          </div>
+        </div>
       </div>
-      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadModal" id="upload-file-main-btn">
-        <i class="bi bi-cloud-upload me-1"></i>Upload File
+    </div>
+  </div>
+
+  <!-- Drag-and-Drop Dropzone Upload Bar -->
+  <div class="card border-dashed mb-4 text-center p-4" id="dropzone-area" style="border:2px dashed var(--cs-border);border-radius:16px;background:var(--cs-surface-2);cursor:pointer;" onclick="document.getElementById('file-input-direct').click()">
+    <input type="file" id="file-input-direct" class="d-none" onchange="uploadDirectFile(this)">
+    <i class="bi bi-cloud-arrow-up-fill text-primary fs-1 mb-2 opacity-75"></i>
+    <h6 class="fw-bold mb-1">Drag & Drop files here or click to upload</h6>
+    <p class="small text-muted mb-0">Supports Images, PDFs, Word, Excel, Archives, and Media up to 20MB</p>
+    <div id="upload-progress-container" class="mt-3 d-none">
+      <div class="progress" style="height:6px;">
+        <div id="upload-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width:0%"></div>
+      </div>
+      <div class="x-small text-muted mt-1" id="upload-status-text">Uploading...</div>
+    </div>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <form method="GET" class="d-flex flex-wrap gap-2 align-items-center flex-grow-1" id="files-filter-form">
+      <?php if ($type_filter): ?><input type="hidden" name="type" value="<?= htmlspecialchars($type_filter) ?>"><?php endif; ?>
+      <div class="input-group style-none" style="max-width:320px;">
+        <span class="input-group-text border-0 bg-body-secondary"><i class="bi bi-search"></i></span>
+        <input type="text" name="q" class="form-control border-0 bg-body-secondary" placeholder="Search file name…" value="<?= htmlspecialchars($search) ?>">
+      </div>
+
+      <select name="project_id" class="form-select border-0 bg-body-secondary" style="max-width:200px;" onchange="this.form.submit()">
+        <option value="">All Projects</option>
+        <?php foreach ($projects_list as $p): ?>
+        <option value="<?= $p['id'] ?>" <?= $project_filter==$p['id']?'selected':'' ?>><?= htmlspecialchars($p['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
+
+      <button type="submit" class="btn btn-secondary btn-sm px-3">Filter</button>
+      <?php if ($search || $project_filter || $type_filter): ?>
+      <a href="files.php" class="btn btn-outline-secondary btn-sm px-3">Clear</a>
+      <?php endif; ?>
+    </form>
+  </div>
+
+  <!-- Files Display Grid -->
+  <?php if (empty($files)): ?>
+  <div class="card border-0 shadow-sm text-center py-5" style="border-radius:16px;">
+    <div class="card-body">
+      <i class="bi bi-folder-x fs-1 text-muted opacity-50 d-block mb-3"></i>
+      <h5 class="fw-bold mb-1">No files found</h5>
+      <p class="small text-muted mb-3">Upload a file or adjust your filters to view stored files.</p>
+      <button class="btn btn-primary btn-sm px-4" data-bs-toggle="modal" data-bs-target="#uploadModal">
+        <i class="bi bi-cloud-upload me-1"></i>Upload File Now
       </button>
     </div>
   </div>
+  <?php else: ?>
 
-  <div class="app-content">
-
-    <!-- Filters -->
-    <div class="card mb-4">
-      <div class="card-body py-3">
-        <form method="GET" class="d-flex flex-wrap gap-2 align-items-center" id="files-filter-form">
-          <div class="input-group input-group-sm" style="max-width:240px;">
-            <span class="input-group-text border-0 bg-body-secondary"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" name="q" class="form-control border-0 bg-body-secondary" placeholder="Search files…" value="<?= htmlspecialchars($search) ?>" id="files-search">
+  <div class="row g-3" id="files-grid">
+    <?php foreach ($files as $f):
+      $iconInfo = get_file_icon_class($f['file_type']);
+      $fileUrl = 'uploads/' . htmlspecialchars($f['file_name']);
+      $isImage = in_array(strtolower($f['file_type']), ['jpg','jpeg','png','gif','webp']);
+    ?>
+    <div class="col-sm-6 col-md-4 col-xl-3" id="file-card-<?= $f['id'] ?>">
+      <div class="card h-100 border-0 shadow-sm p-3 position-relative" style="border-radius:16px;background:var(--cs-surface);transition:all .2s ease;">
+        <div class="d-flex align-items-start justify-content-between mb-3">
+          <div class="rounded-3 p-3 bg-body-tertiary d-flex align-items-center justify-content-center" style="width:52px;height:52px;">
+            <i class="bi <?= $iconInfo['icon'] ?> <?= $iconInfo['color'] ?> fs-2"></i>
           </div>
-          <select name="project_id" class="form-select form-select-sm border-0 bg-body-secondary" style="max-width:200px;" id="files-project-filter">
-            <option value="">All Projects</option>
-            <?php foreach ($projects_list as $p): ?>
-            <option value="<?= $p['id'] ?>" <?= $project_filter==$p['id']?'selected':'' ?>><?= htmlspecialchars($p['name']) ?></option>
-            <?php endforeach; ?>
-          </select>
-          <select name="type" class="form-select form-select-sm border-0 bg-body-secondary" style="max-width:160px;" id="files-type-filter">
-            <option value="">All Types</option>
-            <option value="image" <?= $type_filter==='image'?'selected':'' ?>>Images</option>
-            <option value="document" <?= $type_filter==='document'?'selected':'' ?>>Documents</option>
-            <option value="archive" <?= $type_filter==='archive'?'selected':'' ?>>Archives</option>
-          </select>
-          <button type="submit" class="btn btn-sm btn-primary" id="files-filter-btn">Filter</button>
-          <?php if ($search || $project_filter || $type_filter): ?>
-          <a href="files.php" class="btn btn-sm btn-outline-secondary" id="files-clear-filter">Clear</a>
+
+          <div class="dropdown">
+            <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical fs-5"></i></button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="border-radius:12px;">
+              <li><a class="dropdown-item py-2" href="<?= $fileUrl ?>" target="_blank"><i class="bi bi-download me-2 text-primary"></i>Download</a></li>
+              <li><button class="dropdown-item py-2" onclick="copyShareLink('<?= $fileUrl ?>')"><i class="bi bi-link-45deg me-2 text-info"></i>Copy Share Link</button></li>
+              <?php if (is_admin() || $f['uploaded_by'] == $uid): ?>
+              <li><hr class="dropdown-divider"></li>
+              <li><button class="dropdown-item py-2 text-danger" onclick="deleteFileAjax(<?= $f['id'] ?>)"><i class="bi bi-trash me-2"></i>Delete File</button></li>
+              <?php endif; ?>
+            </ul>
+          </div>
+        </div>
+
+        <div class="fw-bold text-truncate mb-1" title="<?= htmlspecialchars($f['original_name']) ?>">
+          <?= htmlspecialchars($f['original_name']) ?>
+        </div>
+
+        <div class="x-small text-muted mb-3 d-flex align-items-center justify-content-between">
+          <span><?= format_file_size($f['file_size']) ?></span>
+          <span><?= time_ago($f['uploaded_at']) ?></span>
+        </div>
+
+        <?php if ($f['project_name']): ?>
+        <div class="mb-3">
+          <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold" style="font-size:.68rem;">
+            <i class="bi bi-kanban me-1"></i><?= htmlspecialchars($f['project_name']) ?>
+          </span>
+        </div>
+        <?php endif; ?>
+
+        <div class="mt-auto pt-2 border-top d-flex align-items-center justify-content-between x-small text-muted">
+          <span>By <?= htmlspecialchars($f['uploader_name']) ?></span>
+          <?php if ($isImage): ?>
+          <button class="btn btn-sm btn-outline-primary py-0 px-2 style-none" style="font-size:.7rem;" onclick="previewImage('<?= $fileUrl ?>', '<?= htmlspecialchars(addslashes($f['original_name'])) ?>')">
+            <i class="bi bi-eye me-1"></i>Preview
+          </button>
+          <?php else: ?>
+          <a href="<?= $fileUrl ?>" target="_blank" class="text-primary text-decoration-none fw-semibold">Open <i class="bi bi-box-arrow-up-right ms-1"></i></a>
           <?php endif; ?>
-        </form>
-      </div>
-    </div>
-
-    <!-- File Grid -->
-    <?php if (empty($files)): ?>
-    <div class="text-center py-5">
-      <i class="bi bi-folder2-open fs-1 d-block mb-3 opacity-25"></i>
-      <h5 class="text-muted">No files found</h5>
-      <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#uploadModal">Upload your first file</button>
-    </div>
-    <?php else: ?>
-
-    <!-- List View -->
-    <div class="card">
-      <div class="card-header bg-transparent py-3">
-        <div class="row align-items-center x-small text-muted text-uppercase fw-semibold" style="letter-spacing:.06em;">
-          <div class="col-5">File</div>
-          <div class="col-2 d-none d-md-block">Project</div>
-          <div class="col-2 d-none d-lg-block">Uploaded By</div>
-          <div class="col-2 d-none d-md-block">Date</div>
-          <div class="col text-end">Actions</div>
         </div>
       </div>
-      <div class="card-body p-0">
-        <?php foreach ($files as $f): ?>
-        <?php
-          $ext = strtolower(pathinfo($f['file_name'], PATHINFO_EXTENSION));
-          [$ficon, $fcol] = $file_icons[$ext] ?? ['bi-file-earmark-fill','secondary'];
-          $fsize = $f['file_size'] > 1048576 ? round($f['file_size']/1048576,1).'MB' : round($f['file_size']/1024,1).'KB';
-        ?>
-        <div class="row align-items-center px-4 py-3 border-bottom hover-row" id="file-row-<?= $f['id'] ?>">
-          <div class="col-5 d-flex align-items-center gap-3">
-            <div class="rounded-2 d-flex align-items-center justify-content-center flex-shrink-0 bg-<?= $fcol ?> bg-opacity-10 text-<?= $fcol ?>" style="width:44px;height:44px;font-size:1.4rem;">
-              <i class="bi <?= $ficon ?>"></i>
-            </div>
-            <div class="overflow-hidden">
-              <div class="fw-semibold small text-truncate"><?= htmlspecialchars($f['original_name']) ?></div>
-              <div class="x-small text-muted"><?= strtoupper($ext) ?> · <?= $fsize ?></div>
-            </div>
-          </div>
-          <div class="col-2 d-none d-md-block">
-            <span class="small text-muted"><?= htmlspecialchars($f['project_name'] ?? '—') ?></span>
-          </div>
-          <div class="col-2 d-none d-lg-block">
-            <span class="small text-muted"><?= htmlspecialchars($f['uploader_name']) ?></span>
-          </div>
-          <div class="col-2 d-none d-md-block">
-            <span class="x-small text-muted"><?= time_ago($f['uploaded_at']) ?></span>
-          </div>
-          <div class="col text-end d-flex align-items-center justify-content-end gap-1">
-            <?php if (in_array($ext, ['jpg','jpeg','png','gif'])): ?>
-            <button class="btn btn-sm btn-outline-secondary" onclick="previewImage('uploads/<?= htmlspecialchars($f['file_path']) ?>','<?= htmlspecialchars($f['original_name']) ?>')" id="preview-<?= $f['id'] ?>"><i class="bi bi-eye"></i></button>
-            <?php endif; ?>
-            <a href="uploads/<?= htmlspecialchars($f['file_path']) ?>" download="<?= htmlspecialchars($f['original_name']) ?>" class="btn btn-sm btn-outline-primary" id="dl-<?= $f['id'] ?>"><i class="bi bi-download"></i></a>
-            <?php if (is_admin() || $f['uploaded_by'] == $uid): ?>
-            <form method="POST" class="d-inline" onsubmit="return confirm('Delete this file?')">
-              <input type="hidden" name="delete_file" value="<?= $f['id'] ?>">
-              <button type="submit" class="btn btn-sm btn-outline-danger" id="del-file-<?= $f['id'] ?>"><i class="bi bi-trash"></i></button>
-            </form>
-            <?php endif; ?>
-          </div>
-        </div>
-        <?php endforeach; ?>
-      </div>
     </div>
-    <?php endif; ?>
+    <?php endforeach; ?>
   </div>
-</main>
 
-<!-- Upload Modal -->
+  <?php endif; ?>
+</div>
+
+<!-- Modal: Upload File -->
 <div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <form action="api/files.php?action=upload" method="POST" enctype="multipart/form-data" id="main-upload-form">
-        <div class="modal-header border-0 pb-0">
-          <h4 class="modal-title h5 fw-bold"><i class="bi bi-cloud-upload me-2 text-primary"></i>Upload File</h4>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
+    <div class="modal-content border-0 shadow-lg" style="border-radius:20px;">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold" style="font-family:'Outfit';">
+          <i class="bi bi-cloud-upload-fill me-2 text-primary"></i>Upload File to Storage
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form id="upload-modal-form" onsubmit="return handleModalUpload(event)" enctype="multipart/form-data">
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Project (optional)</label>
-            <select name="project_id" class="form-select" id="upload-project-select">
-              <option value="">No specific project</option>
+            <label class="form-label small text-muted">Select File:</label>
+            <input type="file" name="file" id="modal-file-input" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small text-muted">Attach to Project (Optional):</label>
+            <select name="project_id" class="form-select">
+              <option value="">No Project (General Storage)</option>
               <?php foreach ($projects_list as $p): ?>
-              <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+              <option value="<?= $p['id'] ?>" <?= $project_filter==$p['id']?'selected':'' ?>><?= htmlspecialchars($p['name']) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
-          <div class="upload-zone" onclick="document.getElementById('main-file-input').click()" id="main-upload-zone">
-            <i class="bi bi-cloud-upload-fill d-block mb-2"></i>
-            <div class="fw-semibold mb-1">Click to upload or drag & drop</div>
-            <div class="small text-muted">Any file up to 20MB</div>
-          </div>
-          <input type="file" name="file" id="main-file-input" class="d-none" onchange="updateUploadPreview(this)">
-          <div id="upload-preview" class="mt-2 small text-muted"></div>
-        </div>
-        <div class="modal-footer border-0 pt-0">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="main-upload-submit"><i class="bi bi-upload me-1"></i>Upload</button>
-        </div>
-      </form>
+
+          <div id="modal-upload-status" class="mb-3"></div>
+
+          <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+            <i class="bi bi-cloud-upload me-1"></i> Upload File
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Image Preview Modal -->
+<!-- Modal: Image Preview Lightbox -->
 <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content bg-transparent border-0">
-      <div class="modal-header border-0">
-        <h5 class="modal-title text-white" id="preview-filename"></h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg bg-dark text-white" style="border-radius:20px;">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h6 class="modal-title fw-bold" id="preview-filename-title">Image Preview</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body text-center p-0">
-        <img src="" id="preview-img" class="img-fluid rounded-3" style="max-height:80vh;" alt="Preview">
+      <div class="modal-body text-center p-4">
+        <img id="preview-img-target" src="" class="img-fluid rounded-3 shadow" style="max-height:75vh;object-fit:contain;">
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Copy Toast Notification -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1080">
+  <div id="copyToast" class="toast align-items-center text-bg-success border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body small">
+        <i class="bi bi-check-circle-fill me-2"></i>Share link copied to clipboard!
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
   </div>
 </div>
@@ -242,44 +321,127 @@ include __DIR__ . '/includes/header.php';
 <?php
 $page_scripts = <<<JS
 <script>
-function updateUploadPreview(input) {
-  document.getElementById('upload-preview').textContent = input.files[0] ? '📎 ' + input.files[0].name : '';
-}
-function previewImage(src, name) {
-  document.getElementById('preview-img').src = src;
-  document.getElementById('preview-filename').textContent = name;
-  new bootstrap.Modal(document.getElementById('imagePreviewModal')).show();
-}
-// Drag & drop
-const dz2 = document.getElementById('main-upload-zone');
-if (dz2) {
-  dz2.addEventListener('dragover', e => { e.preventDefault(); dz2.classList.add('dragover'); });
-  dz2.addEventListener('dragleave', () => dz2.classList.remove('dragover'));
-  dz2.addEventListener('drop', e => {
-    e.preventDefault(); dz2.classList.remove('dragover');
-    const f = e.dataTransfer.files[0];
-    if (f) { const dt = new DataTransfer(); dt.items.add(f); document.getElementById('main-file-input').files = dt.files; updateUploadPreview(document.getElementById('main-file-input')); }
+// Copy share link helper
+function copyShareLink(path) {
+  const fullUrl = window.location.origin + window.location.pathname.replace('files.php', '') + path;
+  navigator.clipboard.writeText(fullUrl).then(() => {
+    const toastEl = document.getElementById('copyToast');
+    if (toastEl) {
+      const toast = new bootstrap.Toast(toastEl);
+      toast.show();
+    }
   });
 }
-// AJAX submit
-const uf = document.getElementById('main-upload-form');
-if (uf) uf.addEventListener('submit', function(e) {
+
+// Image Lightbox Preview
+function previewImage(url, name) {
+  document.getElementById('preview-img-target').src = url;
+  document.getElementById('preview-filename-title').textContent = name;
+  const modal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+  modal.show();
+}
+
+// Drag & Drop Direct Upload
+function uploadDirectFile(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const container = document.getElementById('upload-progress-container');
+  const bar = document.getElementById('upload-progress-bar');
+  const status = document.getElementById('upload-status-text');
+
+  container.classList.remove('d-none');
+  bar.style.width = '20%';
+  status.textContent = 'Uploading ' + file.name + '...';
+
+  fetch('api/files.php?action=upload', {
+    method: 'POST',
+    body: formData
+  }).then(r => r.json()).then(data => {
+    if (data.success) {
+      bar.style.width = '100%';
+      status.textContent = 'Upload complete! Reloading files...';
+      setTimeout(() => location.reload(), 600);
+    } else {
+      alert(data.message || 'Upload failed.');
+      container.classList.add('d-none');
+    }
+  }).catch(() => {
+    alert('Upload error.');
+    container.classList.add('d-none');
+  });
+}
+
+// Modal Upload Handler
+async function handleModalUpload(e) {
   e.preventDefault();
-  const fd = new FormData(this);
-  const btn = document.getElementById('main-upload-submit');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Uploading…';
-  fetch(this.action, { method: 'POST', body: fd })
-    .then(r => r.json())
-    .then(res => {
-      if (res.success) { showToast('File uploaded!', 'success'); setTimeout(() => location.reload(), 700); }
-      else { showToast(res.message || 'Upload failed.', 'danger'); btn.disabled = false; btn.innerHTML = '<i class="bi bi-upload me-1"></i>Upload'; }
-    }).catch(() => { showToast('Network error.', 'danger'); btn.disabled = false; });
-});
-// Hover row style
-document.querySelectorAll('.hover-row').forEach(row => {
-  row.addEventListener('mouseenter', () => row.style.background = 'rgba(79,70,229,.03)');
-  row.addEventListener('mouseleave', () => row.style.background = '');
-});
+  const form = e.target;
+  const status = document.getElementById('modal-upload-status');
+  status.innerHTML = `<div class="alert alert-info py-2 small mb-0"><div class="spinner-border spinner-border-sm me-2"></div>Uploading file...</div>`;
+
+  try {
+    const formData = new FormData(form);
+    const res = await fetch('api/files.php?action=upload', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.success) {
+      status.innerHTML = `<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle-fill me-1"></i>File uploaded successfully!</div>`;
+      setTimeout(() => location.reload(), 600);
+    } else {
+      status.innerHTML = `<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle-fill me-1"></i>\${data.message || 'Upload failed.'}</div>`;
+    }
+  } catch (err) {
+    status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">Upload error occurred.</div>`;
+  }
+  return false;
+}
+
+// Single-click AJAX File Delete
+async function deleteFileAjax(id) {
+  if (!confirm('Are you sure you want to delete this file?')) return;
+  const card = document.getElementById('file-card-' + id);
+
+  try {
+    const formData = new FormData();
+    formData.append('file_id', id);
+    const res = await fetch('api/files.php?action=delete', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.success) {
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.8)';
+        setTimeout(() => card.remove(), 250);
+      }
+    } else {
+      alert(data.message || 'Delete failed.');
+    }
+  } catch (e) {
+    alert('Delete request error.');
+  }
+}
+
+// Drag over animation for dropzone
+const dropzone = document.getElementById('dropzone-area');
+if (dropzone) {
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.style.background = 'rgba(92,73,224,0.12)';
+  });
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.style.background = 'var(--cs-surface-2)';
+  });
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.style.background = 'var(--cs-surface-2)';
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      document.getElementById('file-input-direct').files = e.dataTransfer.files;
+      uploadDirectFile(document.getElementById('file-input-direct'));
+    }
+  });
+}
 </script>
 JS;
 include __DIR__ . '/includes/footer.php';
