@@ -47,7 +47,6 @@ switch ($action) {
         break;
 
     case 'create':
-        if (!is_manager()) { echo json_encode(['success'=>false,'message'=>'Permission denied']); exit; }
         $project_id  = (int)($_POST['project_id'] ?? 0);
         $title       = trim($_POST['title'] ?? '');
         $description = trim($_POST['description'] ?? '');

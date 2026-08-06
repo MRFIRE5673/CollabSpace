@@ -8,7 +8,7 @@ $uid  = $user['id'];
 $db   = getDB();
 
 // Handle create / edit / delete
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_manager()) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'create') {
@@ -47,6 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_manager()) {
 $search   = trim($_GET['q'] ?? '');
 $filter_s = $_GET['status'] ?? '';
 $filter_p = $_GET['priority'] ?? '';
+
+$where  = '1=1';
+$params = [];
+if ($search)   { $where .= " AND p.name LIKE ?";   $params[] = "%$search%"; }
+if ($filter_s) { $where .= " AND p.status=?";       $params[] = $filter_s; }
+if ($filter_p) { $where .= " AND p.priority=?";     $params[] = $filter_p; }
 
 if (!is_admin()) {
     $where .= " AND (p.created_by = ? OR p.manager_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?))";
@@ -89,11 +95,9 @@ include __DIR__ . '/includes/header.php';
         <h2 class="fw-bold mb-0 fs-5"><i class="bi bi-kanban-fill me-2 text-primary"></i>Projects</h2>
         <p class="text-muted small mb-0"><?= count($projects) ?> project<?= count($projects) != 1 ? 's' : '' ?> found</p>
       </div>
-      <?php if (is_manager()): ?>
       <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createProjectModal" id="create-project-btn">
         <i class="bi bi-plus-lg me-1"></i>New Project
       </button>
-      <?php endif; ?>
     </div>
   </div>
 

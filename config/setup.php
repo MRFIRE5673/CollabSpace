@@ -171,94 +171,16 @@ function seedData(PDO $db): void {
     // Check if already seeded
     $existing = $db->query("SELECT COUNT(*) FROM users")->fetchColumn();
     if ($existing > 0) {
-        echo "ℹ️  Database already has data, skipping seed.\n";
         return;
     }
 
-    // Seed Users — 4 demo roles
+    // Seed default Admin user
     $users = [
-        ['Admin User',        'admin@workspace.com',   password_hash('password123', PASSWORD_DEFAULT), 'admin'],
-        ['Sarah Johnson',     'pm@workspace.com',      password_hash('password123', PASSWORD_DEFAULT), 'manager'],
-        ['Mike Chen',         'member@workspace.com',  password_hash('password123', PASSWORD_DEFAULT), 'member'],
-        ['Emily Davis',       'emily@workspace.com',   password_hash('password123', PASSWORD_DEFAULT), 'member'],
-        ['James Wilson',      'james@workspace.com',   password_hash('password123', PASSWORD_DEFAULT), 'member'],
-        ['Viewer Guest',      'viewer@workspace.com',  password_hash('password123', PASSWORD_DEFAULT), 'viewer'],
+        ['Admin User', 'admin@workspace.com', password_hash('password123', PASSWORD_DEFAULT), 'admin']
     ];
     $stmt = $db->prepare("INSERT INTO users (name, email, password, role) VALUES (?,?,?,?)");
     foreach ($users as $u) $stmt->execute($u);
-    echo "✅ Users seeded.\n";
-
-    // Seed Workspace
-    $db->exec("INSERT INTO workspaces (name, description, color, created_by) VALUES ('TechCorp HQ', 'Main company collaboration workspace', '#4f46e5', 1)");
-    $ws_id = $db->lastInsertId();
-
-    // Add members to workspace
-    $db->exec("INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($ws_id, 1, 'owner'), ($ws_id, 2, 'admin'), ($ws_id, 3, 'member'), ($ws_id, 4, 'member'), ($ws_id, 5, 'member')");
-
-    // Seed Projects
-    $db->exec("INSERT INTO projects (workspace_id, name, description, status, priority, start_date, due_date, progress, manager_id, created_by) VALUES
-        ($ws_id, 'Website Redesign', 'Complete overhaul of company website with modern UI/UX', 'active', 'high', '2026-07-01', '2026-08-31', 65, 2, 1),
-        ($ws_id, 'Mobile App Development', 'iOS and Android app for customer portal', 'planning', 'critical', '2026-08-01', '2026-10-31', 15, 2, 1),
-        ($ws_id, 'Database Migration', 'Migrate legacy DB to MySQL 8.x cluster', 'active', 'high', '2026-07-15', '2026-08-15', 40, 2, 1),
-        ($ws_id, 'Marketing Campaign Q3', 'Digital marketing campaign for Q3 product launch', 'on_hold', 'medium', '2026-07-01', '2026-09-30', 30, 2, 1)
-    ");
-
-    // Add project members
-    $db->exec("INSERT IGNORE INTO project_members (project_id, user_id) VALUES (1,1),(1,2),(1,3),(1,4),(2,1),(2,2),(2,5),(3,1),(3,2),(3,3),(4,2),(4,4),(4,5)");
-
-    // Seed Tasks
-    $db->exec("INSERT INTO tasks (project_id, title, description, assigned_to, created_by, priority, status, due_date) VALUES
-        (1, 'Design new homepage mockup', 'Create Figma mockups for homepage redesign', 3, 2, 'high', 'done', '2026-07-20'),
-        (1, 'Implement responsive navigation', 'Build mobile-first navbar with Bootstrap 5', 3, 2, 'high', 'done', '2026-07-25'),
-        (1, 'Create component library', 'Build reusable UI components', 4, 2, 'medium', 'in_progress', '2026-08-05'),
-        (1, 'SEO optimization', 'Optimize meta tags, schema markup, and page speed', 4, 2, 'medium', 'in_review', '2026-08-10'),
-        (1, 'Cross-browser testing', 'Test on Chrome, Firefox, Safari, Edge', 3, 2, 'low', 'todo', '2026-08-20'),
-        (1, 'Performance audit', 'Lighthouse audit and optimization', 5, 2, 'high', 'in_progress', '2026-08-15'),
-        (2, 'Setup React Native project', 'Initialize project with Expo and navigation', 5, 2, 'critical', 'in_progress', '2026-08-10'),
-        (2, 'Design app wireframes', 'Low-fidelity wireframes for all screens', 4, 2, 'high', 'todo', '2026-08-05'),
-        (3, 'Backup production database', 'Full backup before migration', 3, 2, 'critical', 'done', '2026-07-20'),
-        (3, 'Test migration scripts', 'Run scripts on staging environment', 3, 2, 'high', 'in_progress', '2026-08-01')
-    ");
-
-    // Seed Chat Messages
-    $db->exec("INSERT INTO chats (project_id, room_type, sender_id, receiver_id, message) VALUES
-        (1, 'project', 2, NULL, 'Welcome to the Website Redesign project chat! 👋'),
-        (1, 'project', 3, NULL, 'Thanks! I have uploaded the initial mockups to the files section.'),
-        (1, 'project', 4, NULL, 'Great work on the mockups! When can we review them together?'),
-        (1, 'project', 2, NULL, 'Let us schedule a review for tomorrow at 10 AM. I will send a calendar invite.'),
-        (1, 'project', 5, NULL, 'I have started working on the performance audit. Should have results by EOD.'),
-        (2, 'project', 2, NULL, 'Mobile app kickoff - Let us discuss the tech stack today.'),
-        (2, 'project', 5, NULL, 'I prefer React Native for cross-platform support. Expo makes setup easier.')
-    ");
-
-    // Seed Notifications
-    $db->exec("INSERT INTO notifications (user_id, title, message, type, link) VALUES
-        (3, 'New Task Assigned', 'You have been assigned: Cross-browser testing', 'task', 'tasks.php'),
-        (4, 'Task Deadline Approaching', 'SEO optimization is due in 3 days', 'task', 'tasks.php'),
-        (5, 'New Project Invitation', 'You have been added to Mobile App Development', 'project', 'projects.php'),
-        (3, 'File Uploaded', 'New file uploaded to Website Redesign', 'file', 'files.php'),
-        (2, 'Project Status Updated', 'Database Migration progress is at 40%', 'project', 'projects.php')
-    ");
-
-    // Seed Activity Logs
-    $db->exec("INSERT INTO activity_logs (project_id, user_id, action, description, entity_type) VALUES
-        (1, 2, 'project_created', 'Created project: Website Redesign', 'project'),
-        (1, 3, 'task_completed', 'Completed task: Design new homepage mockup', 'task'),
-        (1, 4, 'file_uploaded', 'Uploaded file: homepage_mockup_v2.fig', 'file'),
-        (1, 2, 'member_added', 'Added Mike Chen to project', 'user'),
-        (2, 2, 'project_created', 'Created project: Mobile App Development', 'project'),
-        (3, 3, 'task_completed', 'Completed task: Backup production database', 'task'),
-        (NULL, 1, 'user_registered', 'New user registered: Emily Davis', 'user'),
-        (1, 5, 'comment_added', 'Left a comment on Performance audit task', 'task')
-    ");
-
-    echo "✅ Seed data inserted successfully.\n";
-    echo "\n🎉 Setup complete! You can now visit the application.\n";
-    echo "\n📋 Demo Login Credentials (password: password123)\n";
-    echo "   🔴 Admin   : admin@workspace.com   → Full dashboard (dashboard.php)\n";
-    echo "   🟢 Manager : pm@workspace.com      → Manager view  (manager_dashboard.php)\n";
-    echo "   🔵 Member  : member@workspace.com  → Member board  (member_dashboard.php)\n";
-    echo "   ⚪ Viewer  : viewer@workspace.com  → Viewer portal (viewer_dashboard.php)\n";
+    echo "✅ Clean database initialized.\n";
 }
 
 // Standalone execution

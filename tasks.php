@@ -11,6 +11,13 @@ $project_id = (int)($_GET['project_id'] ?? 0);
 $filter_priority = $_GET['priority'] ?? '';
 $filter_assignee = (int)($_GET['assignee'] ?? 0);
 
+// Build query
+$where  = '1=1';
+$params = [];
+if ($project_id) { $where .= ' AND t.project_id=?'; $params[] = $project_id; }
+if ($filter_priority) { $where .= ' AND t.priority=?'; $params[] = $filter_priority; }
+if ($filter_assignee) { $where .= ' AND t.assigned_to=?'; $params[] = $filter_assignee; }
+
 // Fetch projects for filter
 if (!is_admin()) {
     $projects_list = $db->prepare("SELECT id, name FROM projects WHERE created_by=? OR manager_id=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?) ORDER BY name");
@@ -54,11 +61,9 @@ include __DIR__ . '/includes/header.php';
         <h2 class="fw-bold mb-0 fs-5"><i class="bi bi-check2-square me-2 text-primary"></i>Task Board</h2>
         <p class="text-muted small mb-0"><?= count($all_tasks) ?> task<?= count($all_tasks)!=1?'s':'' ?> total</p>
       </div>
-      <?php if (is_manager()): ?>
       <button class="btn btn-primary btn-sm" onclick="openCreateTaskModal('todo')" id="global-add-task-btn">
-        <i class="bi bi-plus-lg me-1"></i>New Task
+        <i class="bi bi-plus-lg me-1"></i>Add Task
       </button>
-      <?php endif; ?>
     </div>
   </div>
 

@@ -8,7 +8,7 @@ $uid  = $user['id'];
 $db   = getDB();
 
 // Handle create
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_admin()) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $act = $_POST['action'] ?? '';
     if ($act === 'create') {
         $name = trim($_POST['name'] ?? '');
@@ -63,11 +63,9 @@ include __DIR__ . '/includes/header.php';
         <h2 class="fw-bold mb-0 fs-5"><i class="bi bi-grid-1x2-fill me-2 text-primary"></i>Workspaces</h2>
         <p class="text-muted small mb-0"><?= count($workspaces) ?> workspace<?= count($workspaces)!=1?'s':'' ?></p>
       </div>
-      <?php if (is_admin()): ?>
       <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createWsModal" id="create-ws-btn">
         <i class="bi bi-plus-lg me-1"></i>New Workspace
       </button>
-      <?php endif; ?>
     </div>
   </div>
 

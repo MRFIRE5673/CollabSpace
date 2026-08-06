@@ -86,8 +86,9 @@ include __DIR__ . '/includes/header.php';
           </a>
           <?php endforeach; ?>
 
-          <div class="px-2 py-2 mt-2">
+          <div class="px-2 py-2 mt-2 d-flex align-items-center justify-content-between">
             <div class="fw-semibold small text-muted text-uppercase" style="letter-spacing:.08em;font-size:.65rem;">Direct Messages</div>
+            <button class="btn btn-link btn-sm p-0 text-primary" data-bs-toggle="modal" data-bs-target="#newDmModal" title="New Direct Message"><i class="bi bi-plus-circle-fill fs-6"></i></button>
           </div>
           <?php foreach ($dm_users as $u): ?>
           <a href="chat.php?type=direct&id=<?= $u['id'] ?>" class="chat-room-item text-decoration-none text-body <?= $room_type==='direct'&&$room_id==$u['id']?'active':'' ?>" id="room-dm-<?= $u['id'] ?>">
@@ -120,65 +121,64 @@ include __DIR__ . '/includes/header.php';
           </div>
           <?php endif; ?>
           <div>
-            <div class="fw-semibold"><?= htmlspecialchars($room_name) ?></div>
+            <div class="fw-bold small"><?= htmlspecialchars($room_name) ?></div>
             <div class="x-small text-muted"><?= $room_type==='project'?'Project Room':'Direct Message' ?></div>
           </div>
-          <?php if ($room_type === 'project' && $room_id): ?>
-          <div class="ms-auto">
-            <a href="project_details.php?id=<?= $room_id ?>" class="btn btn-sm btn-outline-primary" id="go-to-project-btn">
-              <i class="bi bi-box-arrow-up-right me-1"></i>Project
-            </a>
-          </div>
-          <?php endif; ?>
+          <button class="btn btn-outline-primary btn-sm ms-auto" data-bs-toggle="modal" data-bs-target="#newDmModal">
+            <i class="bi bi-plus-lg me-1"></i>New DM
+          </button>
         </div>
 
-        <!-- Messages -->
-        <div class="chat-messages" id="chat-messages-box"
-             data-project-id="<?= $room_type==='project'?$room_id:'' ?>"
-             data-room-type="<?= htmlspecialchars($room_type) ?>"
-             data-receiver-id="<?= $room_type==='direct'?$room_id:'' ?>"
-             data-last-id="<?= $last_id ?>">
-
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chat-messages-container">
           <?php if (empty($messages)): ?>
-          <div class="text-center py-5 text-muted">
-            <i class="bi bi-chat-dots fs-1 d-block mb-2 opacity-25"></i>
-            <p class="small">No messages yet.<br>Start the conversation! 👋</p>
+          <div class="text-center py-5 text-muted" id="chat-empty-state">
+            <i class="bi bi-chat-heart-fill fs-1 text-primary opacity-50 d-block mb-3"></i>
+            <h6 class="fw-bold mb-1">No messages yet</h6>
+            <p class="small text-muted mb-0">Start the conversation by sending a message below!</p>
           </div>
-          <?php endif; ?>
-
+          <?php else: ?>
           <?php foreach ($messages as $m): ?>
-          <?php $isMine = (bool)$m['is_mine']; ?>
-          <div class="d-flex gap-2 <?= $isMine?'flex-row-reverse':'' ?>" data-msg-id="<?= $m['id'] ?>">
-            <div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold" style="width:34px;height:34px;background:#4f46e5;font-size:.72rem;align-self:flex-end;">
-              <?= strtoupper(substr($m['sender_name'],0,2)) ?>
-            </div>
-            <div class="msg-bubble <?= $isMine?'msg-self':'msg-other' ?>">
-              <?php if (!$isMine): ?><div class="x-small text-muted mb-1"><?= htmlspecialchars($m['sender_name']) ?></div><?php endif; ?>
+          <div class="chat-msg <?= $m['is_mine']?'mine':'' ?>" id="msg-<?= $m['id'] ?>">
+            <div class="chat-avatar"><?= strtoupper(substr($m['sender_name'],0,2)) ?></div>
+            <div class="chat-bubble">
+              <div class="chat-meta">
+                <span class="fw-semibold me-2"><?= htmlspecialchars($m['sender_name']) ?></span>
+                <span><?= time_ago($m['created_at']) ?></span>
+              </div>
               <?php if ($m['message']): ?>
-              <div class="msg-bubble-inner"><?= nl2br(htmlspecialchars($m['message'])) ?></div>
+              <div class="chat-text"><?= nl2br(htmlspecialchars($m['message'])) ?></div>
               <?php endif; ?>
               <?php if ($m['file_path']): ?>
-              <div class="mt-1"><a href="uploads/<?= htmlspecialchars($m['file_path']) ?>" class="btn btn-sm btn-outline-secondary" download><i class="bi bi-paperclip me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'File') ?></a></div>
+              <a href="uploads/<?= htmlspecialchars($m['file_path']) ?>" class="chat-attachment" target="_blank">
+                <i class="bi bi-paperclip me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'File') ?>
+              </a>
               <?php endif; ?>
-              <div class="msg-time"><?= time_ago($m['created_at']) ?></div>
             </div>
           </div>
           <?php endforeach; ?>
+          <?php endif; ?>
         </div>
 
-        <!-- Input -->
-        <div class="chat-footer">
+        <!-- Chat Input -->
+        <div class="chat-input-bar">
           <form id="chat-form" onsubmit="return sendChatMessage(this)" enctype="multipart/form-data">
             <input type="hidden" name="project_id" value="<?= $room_type==='project'?$room_id:'' ?>">
             <input type="hidden" name="room_type" value="<?= htmlspecialchars($room_type) ?>">
             <input type="hidden" name="receiver_id" value="<?= $room_type==='direct'?$room_id:'' ?>">
-            <div class="d-flex gap-2">
-              <textarea id="chat-input" name="message" class="form-control border-0 bg-body-secondary" rows="1" placeholder="Type a message… (Enter to send)" style="resize:none;border-radius:12px!important;"></textarea>
-              <div class="d-flex flex-column gap-1">
-                <label class="btn btn-outline-secondary btn-sm" for="chat-file-input" title="Attach file" id="chat-attach-label"><i class="bi bi-paperclip"></i></label>
-                <input type="file" id="chat-file-input" name="chat_file" class="d-none">
-                <button type="submit" class="btn btn-primary btn-sm" id="chat-send-btn"><i class="bi bi-send-fill"></i></button>
-              </div>
+            <input type="hidden" id="last-msg-id" value="<?= $last_id ?>">
+
+            <div class="d-flex align-items-center gap-2">
+              <label class="btn btn-sm btn-outline-secondary mb-0 p-2 flex-shrink-0" title="Attach file">
+                <i class="bi bi-paperclip fs-6"></i>
+                <input type="file" name="chat_file" id="chat-file-input" class="d-none">
+              </label>
+              <input type="text" name="message" id="chat-msg-input"
+                     class="form-control form-control-sm border-0 bg-body-secondary"
+                     placeholder="Type a message… (Press Enter to send)" autocomplete="off">
+              <button type="submit" class="btn btn-primary btn-sm px-3 flex-shrink-0" id="chat-send-btn">
+                <i class="bi bi-send-fill me-1"></i> Send
+              </button>
             </div>
             <div id="chat-file-preview" class="mt-1 x-small text-muted"></div>
           </form>
@@ -187,23 +187,58 @@ include __DIR__ . '/includes/header.php';
 
       <!-- Online Sidebar -->
       <div class="d-none d-xl-flex flex-column" style="width:200px;border-left:1px solid rgba(0,0,0,.07);padding:16px;gap:8px;flex-shrink:0;">
-        <div class="fw-semibold small text-muted text-uppercase" style="letter-spacing:.08em;font-size:.65rem;">Online</div>
+        <div class="fw-semibold small text-muted text-uppercase" style="letter-spacing:.08em;font-size:.65rem;">Online Teammates</div>
         <div id="online-users-list">
           <?php foreach ($dm_users as $u): if ($u['status']==='online'): ?>
-          <div class="d-flex align-items-center gap-2 py-1">
+          <a href="chat.php?type=direct&id=<?= $u['id'] ?>" class="d-flex align-items-center gap-2 py-1 text-decoration-none text-body">
             <span class="online-indicator"></span>
-            <span class="small"><?= htmlspecialchars($u['name']) ?></span>
-          </div>
+            <span class="small text-truncate"><?= htmlspecialchars($u['name']) ?></span>
+          </a>
           <?php endif; endforeach; ?>
           <div class="d-flex align-items-center gap-2 py-1">
             <span class="online-indicator"></span>
-            <span class="small"><?= htmlspecialchars($user['name']) ?> (you)</span>
+            <span class="small fw-semibold"><?= htmlspecialchars($user['name']) ?> (you)</span>
           </div>
         </div>
       </div>
     </div>
   </div>
-</main>
+
+<!-- New Direct Message Modal -->
+<div class="modal fade" id="newDmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom-0 pb-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-chat-dots-fill me-2 text-primary"></i>Start Direct Message</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small text-muted">Select Teammate to Chat With:</label>
+          <div class="list-group">
+            <?php foreach ($dm_users as $u): ?>
+            <a href="chat.php?type=direct&id=<?= $u['id'] ?>" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3 border-0 rounded-3 mb-1 bg-body-secondary">
+              <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary text-white fw-bold d-flex align-items-center justify-content-center" style="width:38px;height:38px;font-size:.8rem;">
+                  <?= strtoupper(substr($u['name'],0,2)) ?>
+                </div>
+                <div>
+                  <div class="fw-semibold small"><?= htmlspecialchars($u['name']) ?></div>
+                  <div class="x-small text-muted"><?= $u['status']==='online'?'<span class="text-success">● Online</span>':'Offline' ?></div>
+                </div>
+              </div>
+              <span class="btn btn-sm btn-outline-primary rounded-pill px-3">Chat <i class="bi bi-chevron-right ms-1"></i></span>
+            </a>
+            <?php endforeach; ?>
+            <?php if (empty($dm_users)): ?>
+            <div class="text-center py-4 text-muted small">No other registered users found. Tell friends to sign up!</div>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <?php
 $page_scripts = <<<JS
