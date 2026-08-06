@@ -41,8 +41,8 @@ $user = current_user();
   <!-- Bootstrap 5 CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
 
-  <!-- Custom CSS System -->
-  <link rel="stylesheet" href="css/custom.css" />
+  <!-- Custom CSS System (with cache busting) -->
+  <link rel="stylesheet" href="css/custom.css?v=<?= filemtime(__DIR__ . '/../css/custom.css') ?>" />
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">
 <div class="app-wrapper">
