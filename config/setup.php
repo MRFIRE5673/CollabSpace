@@ -261,9 +261,11 @@ function seedData(PDO $db): void {
     echo "   ⚪ Viewer  : viewer@workspace.com  → Viewer portal (viewer_dashboard.php)\n";
 }
 
-// Run setup
-try {
-    setupDatabase();
-} catch (Exception $e) {
-    echo "❌ Error: " . $e->getMessage() . "\n";
+// Standalone execution
+if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'setup.php') {
+    try {
+        setupDatabase();
+    } catch (Exception $e) {
+        echo "❌ Error: " . $e->getMessage() . "\n";
+    }
 }

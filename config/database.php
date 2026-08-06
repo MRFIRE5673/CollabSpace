@@ -62,6 +62,23 @@ function render_db_exception(string $error_msg): void {
     exit;
 }
 
+function ensure_tables_exist(PDO $pdo): void {
+    static $checked = false;
+    if ($checked) return;
+    $checked = true;
+    try {
+        $check = $pdo->query("SHOW TABLES LIKE 'users'")->fetch();
+        if (!$check) {
+            require_once __DIR__ . '/setup.php';
+            if (function_exists('setupDatabase')) {
+                setupDatabase();
+            }
+        }
+    } catch (Exception $e) {
+        // Ignore check errors
+    }
+}
+
 function getDB(): PDO {
     global $pdo;
     if ($pdo !== null) return $pdo;
@@ -79,6 +96,7 @@ function getDB(): PDO {
 
     try {
         $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+        ensure_tables_exist($pdo);
     } catch (PDOException $e) {
         // Attempt to create DB if it doesn't exist (local dev only)
         if (APP_ENV === 'local') {
@@ -87,6 +105,7 @@ function getDB(): PDO {
                 $tmp = new PDO($dsn_no_db, DB_USER, DB_PASS, $options);
                 $tmp->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
                 $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+                ensure_tables_exist($pdo);
                 return $pdo;
             } catch (PDOException $e2) {
                 render_db_exception("Database connection failed: " . $e2->getMessage());
