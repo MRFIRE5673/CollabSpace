@@ -74,6 +74,13 @@ function ensure_tables_exist(PDO $pdo): void {
                 setupDatabase();
             }
         }
+        // Ensure admin@admin.com account exists with password 12345678
+        $admin_exists = $pdo->query("SELECT id FROM users WHERE email='admin@admin.com'")->fetch();
+        if (!$admin_exists) {
+            $pass = password_hash('12345678', PASSWORD_DEFAULT);
+            $pdo->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'admin')")
+                ->execute(['Admin User', 'admin@admin.com', $pass]);
+        }
     } catch (Exception $e) {
         // Ignore check errors
     }
