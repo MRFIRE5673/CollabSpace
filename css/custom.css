@@ -108,8 +108,8 @@ h1, h2, h3, .brand-text, .hero-title {
   z-index: 1040;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(165deg, #1a1535 0%, #120e2a 60%, #0d0b1f 100%) !important;
-  border-right: 1px solid rgba(255,255,255,.05) !important;
+  background: var(--cs-sidebar-bg, linear-gradient(165deg, #1a1535 0%, #120e2a 60%, #0d0b1f 100%));
+  border-right: 1px solid var(--cs-border);
   transition: transform var(--cs-t) var(--cs-ease);
 }
 
@@ -514,13 +514,14 @@ body.sidebar-collapsed .app-main {
 
 /* ─── GLASS CARDS ────────────────────────────────────────── */
 .card {
-  background: var(--cs-surface) !important;
-  border: 1px solid var(--cs-border) !important;
-  border-radius: var(--cs-radius-lg) !important;
-  box-shadow: var(--cs-shadow-sm) !important;
+  background: var(--cs-surface);
+  border: 1px solid var(--cs-border);
+  border-radius: var(--cs-radius-lg);
+  box-shadow: var(--cs-shadow-sm);
+  color: var(--cs-text);
   transition: transform var(--cs-t) var(--cs-ease),
               box-shadow var(--cs-t) var(--cs-ease),
-              border-color var(--cs-t) var(--cs-ease) !important;
+              border-color var(--cs-t) var(--cs-ease);
 }
 .card:hover {
   transform: translateY(-3px);
@@ -972,4 +973,91 @@ body.sidebar-collapsed .app-main {
               background-color var(--cs-t-slow) var(--cs-ease),
               border-color var(--cs-t-slow) var(--cs-ease),
               color var(--cs-t) var(--cs-ease) !important;
+}
+
+/* ─── LIGHT MODE CRISP HIGH-CONTRAST RULES ───────────────── */
+[data-bs-theme="light"] {
+  --cs-bg: #f4f3ff;
+  --cs-surface: #ffffff;
+  --cs-surface-2: #f8f7ff;
+  --cs-border: rgba(92, 73, 224, 0.12);
+  --cs-text: #1e1b4b;
+  --cs-text-muted: #6b7280;
+  --cs-sidebar-bg: #ffffff;
+}
+
+[data-bs-theme="light"] .app-sidebar {
+  background: #ffffff !important;
+  border-right: 1px solid rgba(92, 73, 224, 0.12) !important;
+}
+
+[data-bs-theme="light"] .app-sidebar .brand-title,
+[data-bs-theme="light"] .app-sidebar .nav-link,
+[data-bs-theme="light"] .app-sidebar .sidebar-heading,
+[data-bs-theme="light"] .app-sidebar .nav-icon {
+  color: #1e1b4b !important;
+}
+
+[data-bs-theme="light"] .app-sidebar .nav-link:hover,
+[data-bs-theme="light"] .app-sidebar .nav-link.active {
+  background: rgba(92, 73, 224, 0.08) !important;
+  color: #5c49e0 !important;
+}
+
+[data-bs-theme="light"] .app-header {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-bottom: 1px solid rgba(92, 73, 224, 0.12) !important;
+}
+
+[data-bs-theme="light"] .dropdown-menu {
+  background-color: #ffffff !important;
+  color: #1e1b4b !important;
+  border-color: rgba(92, 73, 224, 0.15) !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08) !important;
+}
+
+[data-bs-theme="light"] .dropdown-item {
+  color: #1e1b4b !important;
+}
+
+[data-bs-theme="light"] .dropdown-item:hover {
+  background-color: rgba(92, 73, 224, 0.08) !important;
+}
+
+[data-bs-theme="light"] .modal-content {
+  background-color: #ffffff !important;
+  color: #1e1b4b !important;
+  border-color: rgba(92, 73, 224, 0.15) !important;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.12) !important;
+}
+
+[data-bs-theme="light"] .form-control,
+[data-bs-theme="light"] .form-select {
+  background-color: #f8f7ff !important;
+  color: #1e1b4b !important;
+  border-color: rgba(92, 73, 224, 0.2) !important;
+}
+
+[data-bs-theme="light"] .form-control::placeholder {
+  color: #6b7280 !important;
+}
+
+[data-bs-theme="light"] .table {
+  color: #1e1b4b !important;
+}
+
+[data-bs-theme="light"] .table th,
+[data-bs-theme="light"] .table td {
+  border-color: rgba(92, 73, 224, 0.1) !important;
+}
+
+[data-bs-theme="light"] .list-group-item {
+  background-color: #ffffff !important;
+  color: #1e1b4b !important;
+  border-color: rgba(92, 73, 224, 0.1) !important;
+}
+
+[data-bs-theme="light"] .bg-body-secondary,
+[data-bs-theme="light"] .bg-body-tertiary {
+  background-color: #f8f7ff !important;
 }
