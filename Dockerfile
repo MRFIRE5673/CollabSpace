@@ -1,40 +1,30 @@
-# ── nginx + PHP-FPM (no Apache MPM issues) ───────────────────
+# ── nginx + PHP-FPM (Railway compatible) ─────────────────────
 FROM php:8.2-fpm-alpine
 
-# Install nginx + required tools
-RUN apk add --no-cache nginx curl zip unzip
+# Install nginx + gettext (envsubst) + tools
+RUN apk add --no-cache nginx gettext curl zip unzip libzip-dev dos2unix
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql
+RUN docker-php-ext-install pdo pdo_mysql zip
 
-# Install zip extension
-RUN apk add --no-cache libzip-dev \
-    && docker-php-ext-install zip
+# PHP production settings
+RUN printf "upload_max_filesize = 20M\npost_max_size = 22M\nmax_execution_time = 60\nmemory_limit = 128M\n" \
+    > /usr/local/etc/php/conf.d/app.ini
 
-# ── nginx config ─────────────────────────────────────────────
-RUN mkdir -p /run/nginx
-COPY docker/nginx.conf /etc/nginx/nginx.conf
+# Nginx + startup config
+COPY docker/nginx.conf /etc/nginx/nginx.conf.template
+COPY docker/start.sh   /start.sh
+RUN dos2unix /start.sh && chmod +x /start.sh
 
-# ── PHP-FPM config ────────────────────────────────────────────
-RUN echo "upload_max_filesize = 20M" >> /usr/local/etc/php/conf.d/app.ini \
- && echo "post_max_size = 22M"       >> /usr/local/etc/php/conf.d/app.ini \
- && echo "max_execution_time = 60"   >> /usr/local/etc/php/conf.d/app.ini \
- && echo "memory_limit = 128M"       >> /usr/local/etc/php/conf.d/app.ini
-
-# ── App files ─────────────────────────────────────────────────
+# App files
 COPY . /var/www/html/
 
-# Uploads directory
-RUN mkdir -p /var/www/html/uploads \
- && chmod 755 /var/www/html/uploads \
- && chown -R www-data:www-data /var/www/html
+# Ensure uploads writable
+RUN mkdir -p /var/www/html/uploads /tmp/client_body /tmp/proxy /tmp/fastcgi \
+ && chown -R www-data:www-data /var/www/html \
+ && chmod 755 /var/www/html/uploads
 
-# ── Startup script ────────────────────────────────────────────
-COPY docker/start.sh /start.sh
-RUN apk add --no-cache dos2unix \
- && dos2unix /start.sh \
- && chmod +x /start.sh
-
-EXPOSE 80
+# Railway sets PORT dynamically — expose hint only
+EXPOSE 8080
 
 CMD ["/start.sh"]
