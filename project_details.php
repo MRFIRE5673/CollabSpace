@@ -213,74 +213,86 @@ include __DIR__ . '/includes/header.php';
 
     <!-- ─── CHAT TAB ──────────────────────────────────────── -->
     <?php elseif ($active_tab === 'chat'): ?>
-    <div class="card" style="height:calc(100vh - 320px);min-height:400px;">
-      <div class="card-header bg-transparent py-3 d-flex align-items-center gap-2">
-        <i class="bi bi-chat-dots-fill text-primary fs-5"></i>
-        <span class="fw-semibold">Project Chat</span>
-        <span class="badge bg-success bg-opacity-15 text-success ms-1">Live</span>
-      </div>
-      <div class="card-body p-0 d-flex flex-column" style="height:100%;">
-        <div class="chat-messages flex-grow-1 p-3 overflow-y-auto" id="chat-messages-box"
-             data-project-id="<?= $project_id ?>"
-             data-room-type="project"
-             data-last-id="<?php
-               $last = $db->prepare("SELECT MAX(id) FROM chats WHERE project_id=? AND room_type='project'");
-               $last->execute([$project_id]);
-               echo (int)$last->fetchColumn();
-             ?>">
-          <?php
-            $chat_msgs = $db->prepare("
-                SELECT c.*, u.name AS sender_name, u.avatar AS sender_avatar,
-                       (c.sender_id = ?) AS is_mine
-                FROM chats c JOIN users u ON u.id=c.sender_id
-                WHERE c.project_id=? AND c.room_type='project'
-                ORDER BY c.created_at ASC LIMIT 100
-            ");
-            $chat_msgs->execute([$uid, $project_id]);
-            $chat_msgs = $chat_msgs->fetchAll();
-          ?>
-          <?php if (empty($chat_msgs)): ?>
-          <div class="text-center py-5 text-muted">
-            <i class="bi bi-chat-dots fs-1 d-block mb-2 opacity-25"></i>
-            <p class="small">No messages yet. Start the conversation!</p>
-          </div>
-          <?php endif; ?>
-          <?php foreach ($chat_msgs as $m): ?>
-          <?php $isMine = (bool)$m['is_mine']; ?>
-          <div class="d-flex gap-2 mb-3 <?= $isMine ? 'flex-row-reverse' : '' ?>" data-msg-id="<?= $m['id'] ?>">
-            <div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold" style="width:34px;height:34px;background:#4f46e5;font-size:.75rem;align-self:flex-end;">
-              <?= strtoupper(substr($m['sender_name'],0,2)) ?>
-            </div>
-            <div class="msg-bubble <?= $isMine ? 'msg-self' : 'msg-other' ?>">
-              <?php if (!$isMine): ?><div class="x-small text-muted mb-1"><?= htmlspecialchars($m['sender_name']) ?></div><?php endif; ?>
-              <?php if ($m['message']): ?>
-              <div class="msg-bubble-inner"><?= nl2br(htmlspecialchars($m['message'])) ?></div>
-              <?php endif; ?>
-              <?php if ($m['file_path']): ?>
-              <div class="mt-1"><a href="uploads/<?= htmlspecialchars($m['file_path']) ?>" class="btn btn-sm btn-outline-secondary" download><i class="bi bi-paperclip me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'File') ?></a></div>
-              <?php endif; ?>
-              <div class="msg-time"><?= time_ago($m['created_at']) ?></div>
-            </div>
-          </div>
-          <?php endforeach; ?>
+      <div class="card border-0 shadow-sm" style="height:calc(100vh - 280px);min-height:480px;border-radius:18px;overflow:hidden;background:var(--cs-surface);">
+        <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex align-items-center gap-2">
+          <i class="bi bi-chat-dots-fill text-primary fs-5"></i>
+          <span class="fw-bold" style="font-family:'Outfit';">Project Chat</span>
+          <span class="badge bg-success bg-opacity-15 text-success ms-1">Live</span>
         </div>
-        <div class="chat-footer border-top p-3" style="flex-shrink:0;">
-          <form id="chat-form" onsubmit="return sendChatMessage(this)" enctype="multipart/form-data">
-            <input type="hidden" name="project_id" value="<?= $project_id ?>">
-            <input type="hidden" name="room_type" value="project">
-            <div class="d-flex gap-2">
-              <textarea id="chat-input" name="message" class="form-control border-0 bg-body-secondary" rows="1" placeholder="Type a message… (Enter to send, Shift+Enter for newline)" style="resize:none;border-radius:12px!important;"></textarea>
-              <div class="d-flex flex-column gap-1">
-                <label class="btn btn-outline-secondary btn-sm" for="chat-file-input" title="Attach file" id="chat-attach-btn"><i class="bi bi-paperclip"></i></label>
-                <input type="file" id="chat-file-input" name="chat_file" class="d-none">
-                <button type="submit" class="btn btn-primary btn-sm" id="chat-send-btn"><i class="bi bi-send-fill"></i></button>
+        <div class="card-body p-0 d-flex flex-column" style="overflow:hidden;">
+          <div class="chat-messages flex-grow-1 p-3 overflow-y-auto" id="chat-messages-box"
+               data-project-id="<?= $project_id ?>"
+               data-room-type="project"
+               data-last-id="<?php
+                 $last = $db->prepare("SELECT MAX(id) FROM chats WHERE project_id=? AND room_type='project'");
+                 $last->execute([$project_id]);
+                 echo (int)$last->fetchColumn();
+               ?>">
+            <?php
+              $chat_msgs = $db->prepare("
+                  SELECT c.*, u.name AS sender_name, u.avatar AS sender_avatar,
+                         (c.sender_id = ?) AS is_mine
+                  FROM chats c JOIN users u ON u.id=c.sender_id
+                  WHERE c.project_id=? AND c.room_type='project'
+                  ORDER BY c.created_at ASC LIMIT 100
+              ");
+              $chat_msgs->execute([$uid, $project_id]);
+              $chat_msgs = $chat_msgs->fetchAll();
+            ?>
+            <?php if (empty($chat_msgs)): ?>
+            <div class="text-center py-5 text-muted my-auto" id="chat-empty-state">
+              <i class="bi bi-chat-dots fs-1 d-block mb-2 opacity-25"></i>
+              <p class="small mb-0">No messages in this chat yet. Start the conversation!</p>
+            </div>
+            <?php endif; ?>
+            <?php foreach ($chat_msgs as $m): ?>
+            <?php $isMine = (bool)$m['is_mine']; ?>
+            <div class="chat-msg <?= $isMine ? 'mine' : '' ?>" id="msg-<?= $m['id'] ?>">
+              <div class="chat-avatar"><?= strtoupper(substr($m['sender_name'],0,2)) ?></div>
+              <div class="chat-bubble">
+                <div class="chat-meta">
+                  <span class="fw-semibold me-2"><?= htmlspecialchars($m['sender_name']) ?></span>
+                  <span><?= time_ago($m['created_at']) ?></span>
+                </div>
+                <?php if ($m['message']): ?>
+                <div class="chat-text"><?= nl2br(htmlspecialchars($m['message'])) ?></div>
+                <?php endif; ?>
+                <?php if ($m['file_path']): ?>
+                <div class="chat-attachment d-flex align-items-center gap-2 mt-1">
+                  <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" download="<?= htmlspecialchars($m['file_name'] ?? $m['file_path']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+                    <i class="bi bi-download me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'Download') ?>
+                  </a>
+                  <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
+                    <i class="bi bi-eye me-1"></i>View
+                  </a>
+                </div>
+                <?php endif; ?>
               </div>
             </div>
-            <div id="chat-file-preview" class="mt-2"></div>
-          </form>
+            <?php endforeach; ?>
+          </div>
+
+          <div class="chat-input-bar p-3 border-top bg-body-tertiary" style="flex-shrink:0;">
+            <form id="chat-form" onsubmit="return sendChatMessage(this)" enctype="multipart/form-data">
+              <input type="hidden" name="project_id" value="<?= $project_id ?>">
+              <input type="hidden" name="room_type" value="project">
+              <div id="chat-file-preview" class="mb-2"></div>
+              <div class="d-flex align-items-center gap-2">
+                <label class="btn btn-sm btn-outline-secondary mb-0 p-2 flex-shrink-0" title="Attach file">
+                  <i class="bi bi-paperclip fs-6"></i>
+                  <input type="file" name="chat_file" id="chat-file-input" class="d-none">
+                </label>
+                <input type="text" name="message" id="chat-input"
+                       class="form-control form-control-sm border-0 bg-body-secondary"
+                       placeholder="Type a message… (Press Enter to send)" autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm px-3 flex-shrink-0" id="chat-send-btn">
+                  <i class="bi bi-send-fill me-1"></i> Send
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
 
     <!-- ─── FILES TAB ─────────────────────────────────────── -->
     <?php elseif ($active_tab === 'files'): ?>
@@ -528,10 +540,10 @@ if (chatFileInput) {
     const preview = document.getElementById('chat-file-preview');
     if (this.files && this.files[0]) {
       preview.innerHTML = `
-        <span class="badge bg-primary bg-opacity-20 text-primary p-2 d-inline-flex align-items-center gap-2" style="font-size:.78rem;border-radius:8px;">
+        <span class="badge bg-primary text-white p-2 d-inline-flex align-items-center gap-2" style="font-size:.78rem;border-radius:8px;">
           <i class="bi bi-paperclip"></i>
           <span>${escapeHtml(this.files[0].name)}</span>
-          <button type="button" class="btn-close ms-1" style="font-size:.65rem;" onclick="clearChatFile()"></button>
+          <button type="button" class="btn-close btn-close-white ms-1" style="font-size:.65rem;" onclick="clearChatFile()"></button>
         </span>`;
     } else {
       preview.innerHTML = '';
