@@ -204,7 +204,7 @@ include __DIR__ . '/includes/header.php';
 
       <!-- Bottom Chat Input Bar -->
       <div class="chat-input-bar">
-        <form id="chat-form" onsubmit="return sendChatMessage(this)" enctype="multipart/form-data">
+        <form id="chat-form" enctype="multipart/form-data">
           <input type="hidden" name="project_id" id="input-project-id" value="<?= $room_type==='project'?$room_id:'' ?>">
           <input type="hidden" name="room_type"  id="input-room-type"  value="<?= htmlspecialchars($room_type) ?>">
           <input type="hidden" name="receiver_id" id="input-receiver-id" value="<?= $room_type==='direct'?$room_id:'' ?>">
@@ -368,13 +368,15 @@ async function switchRoom(type, id, name) {
   }
 }
 
-// Instant Send Message (Optimistic UI)
-async function sendChatMessage(form) {
-  const input = document.getElementById('chat-msg-input');
-  const msgText = input ? input.value.trim() : '';
+// Instant Send Message — uses synchronous e.preventDefault() FIRST, then async work
+// (async functions return Promise which is truthy, so onsubmit="return asyncFn()" won't block navigation)
+function sendChatMessage() {
+  const form     = document.getElementById('chat-form');
+  const input    = document.getElementById('chat-msg-input');
+  const msgText  = input ? input.value.trim() : '';
   const fileInput = document.getElementById('chat-file-input');
-  
-  if (!msgText && (!fileInput || !fileInput.files.length)) return false;
+
+  if (!msgText && (!fileInput || !fileInput.files.length)) return;
 
   const formData = new FormData(form);
   formData.set('room_type', currentRoomType);
@@ -389,30 +391,29 @@ async function sendChatMessage(form) {
   if (input) input.value = '';
   const preview = document.getElementById('chat-file-preview');
   if (preview) preview.textContent = '';
-
   const emptyState = document.getElementById('chat-empty-state');
   if (emptyState) emptyState.remove();
 
-  try {
-    const res = await fetch('api/chat.php?action=send', {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    
-    if (data.success && data.message) {
-      appendMessageUI(data.message);
-      if (data.id && data.id > lastMsgId) {
-        lastMsgId = data.id;
+  // Async send — page never navigates because the form submit is already prevented
+  fetch('api/chat.php?action=send', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success && data.message) {
+        appendMessageUI(data.message);
+        if (data.id && data.id > lastMsgId) lastMsgId = data.id;
       }
-    }
-  } catch (err) {
-    console.error('Failed to send message:', err);
-  }
+    })
+    .catch(err => console.error('Failed to send message:', err));
 
   if (fileInput) fileInput.value = '';
-  return false;
 }
+
+// Attach submit handler with e.preventDefault() synchronously (not in async function)
+document.getElementById('chat-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  sendChatMessage();
+});
 
 function appendMessageUI(m) {
   const isMine = m.is_mine;
@@ -607,13 +608,13 @@ if (chatFileInput) {
   });
 }
 
-// Enter Key Send
+// Enter Key Send — triggers the submit event (which is caught by addEventListener above)
 const chatMsgInput = document.getElementById('chat-msg-input');
 if (chatMsgInput) {
   chatMsgInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      document.getElementById('chat-form').requestSubmit();
+      sendChatMessage();
     }
   });
 }
