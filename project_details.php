@@ -146,6 +146,7 @@ include __DIR__ . '/includes/header.php';
       <li class="nav-item"><a class="nav-link <?= $active_tab==='chat'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=chat" id="tab-chat"><i class="bi bi-chat-dots me-1"></i>Chat</a></li>
       <li class="nav-item"><a class="nav-link <?= $active_tab==='files'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=files" id="tab-files"><i class="bi bi-folder2-open me-1"></i>Files</a></li>
       <li class="nav-item"><a class="nav-link <?= $active_tab==='members'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=members" id="tab-members"><i class="bi bi-people me-1"></i>Members</a></li>
+      <li class="nav-item"><a class="nav-link <?= $active_tab==='analytics'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=analytics" id="tab-analytics"><i class="bi bi-graph-up-arrow me-1"></i>Analytics</a></li>
       <li class="nav-item"><a class="nav-link <?= $active_tab==='activity'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=activity" id="tab-activity"><i class="bi bi-activity me-1"></i>Activity</a></li>
     </ul>
 
@@ -372,6 +373,115 @@ include __DIR__ . '/includes/header.php';
       </div>
       <?php endforeach; ?>
     </div>
+
+    <!-- ─── ANALYTICS TAB ────────────────────────────────── -->
+    <?php elseif ($active_tab === 'analytics'): ?>
+    <?php
+      $st_counts = ['todo'=>0, 'in_progress'=>0, 'in_review'=>0, 'done'=>0];
+      $pr_counts = ['low'=>0, 'medium'=>0, 'high'=>0, 'urgent'=>0];
+      $overdue_cnt = 0;
+      foreach ($all_tasks as $t) {
+        if (isset($st_counts[$t['status']])) $st_counts[$t['status']]++;
+        if (isset($pr_counts[$t['priority']])) $pr_counts[$t['priority']]++;
+        if ($t['status'] !== 'done' && $t['due_date'] && strtotime($t['due_date']) < time()) $overdue_cnt++;
+      }
+      $health_status = ($prog >= 75) ? 'Healthy' : (($overdue_cnt > 2) ? 'Needs Attention' : 'On Track');
+      $health_color  = ($prog >= 75) ? 'success' : (($overdue_cnt > 2) ? 'danger' : 'info');
+    ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm p-4 text-center" style="border-radius:18px;background:var(--cs-surface);">
+          <div class="x-small text-muted mb-1 text-uppercase fw-bold">Project Health Index</div>
+          <div class="display-6 fw-bold text-<?= $health_color ?> my-2"><?= $health_status ?></div>
+          <span class="badge bg-<?= $health_color ?> bg-opacity-15 text-<?= $health_color ?> mx-auto py-2 px-3 rounded-pill" style="font-size:.78rem;">
+            <?= $prog ?>% Completed · <?= $overdue_cnt ?> Overdue
+          </span>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm p-4 text-center" style="border-radius:18px;background:var(--cs-surface);">
+          <div class="x-small text-muted mb-1 text-uppercase fw-bold">Task Completion Ratio</div>
+          <div class="display-6 fw-bold text-primary my-2"><?= $done_t ?> / <?= $total_t ?></div>
+          <span class="small text-muted">Tasks Marked Finished</span>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card h-100 border-0 shadow-sm p-4 text-center" style="border-radius:18px;background:var(--cs-surface);">
+          <div class="x-small text-muted mb-1 text-uppercase fw-bold">Active Members</div>
+          <div class="display-6 fw-bold text-info my-2"><?= count($members) ?></div>
+          <span class="small text-muted">Team Collaborators</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius:18px;background:var(--cs-surface);">
+          <h6 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill text-primary me-2"></i>Task Status Breakdown</h6>
+          <div style="height: 260px;" class="position-relative">
+            <canvas id="statusDoughnutChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="card border-0 shadow-sm p-4 h-100" style="border-radius:18px;background:var(--cs-surface);">
+          <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart-fill text-success me-2"></i>Task Priority Distribution</h6>
+          <div style="height: 260px;" class="position-relative">
+            <canvas id="priorityBarChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Status Chart
+        const ctxStatus = document.getElementById('statusDoughnutChart')?.getContext('2d');
+        if (ctxStatus) {
+          new Chart(ctxStatus, {
+            type: 'doughnut',
+            data: {
+              labels: ['To Do', 'In Progress', 'In Review', 'Done'],
+              datasets: [{
+                data: [<?= $st_counts['todo'] ?>, <?= $st_counts['in_progress'] ?>, <?= $st_counts['in_review'] ?>, <?= $st_counts['done'] ?>],
+                backgroundColor: ['#64748b', '#3b82f6', '#06b6d4', '#10b981'],
+                borderWidth: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom' } }
+            }
+          });
+        }
+
+        // Priority Chart
+        const ctxPriority = document.getElementById('priorityBarChart')?.getContext('2d');
+        if (ctxPriority) {
+          new Chart(ctxPriority, {
+            type: 'bar',
+            data: {
+              labels: ['Low', 'Medium', 'High', 'Urgent'],
+              datasets: [{
+                label: 'Tasks',
+                data: [<?= $pr_counts['low'] ?>, <?= $pr_counts['medium'] ?>, <?= $pr_counts['high'] ?>, <?= $pr_counts['urgent'] ?>],
+                backgroundColor: ['#94a3b8', '#3b82f6', '#f59e0b', '#ef4444'],
+                borderRadius: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+          });
+        }
+      });
+    </script>
 
     <!-- ─── ACTIVITY TAB ──────────────────────────────────── -->
     <?php elseif ($active_tab === 'activity'): ?>

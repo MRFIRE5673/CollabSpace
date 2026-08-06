@@ -117,52 +117,60 @@ include __DIR__ . '/includes/navbar.php';
     <!-- ── Stat Cards ────────────────────────────────────── -->
     <div class="row g-3 mb-4">
       <div class="col-6 col-lg-3">
-        <div class="card stat-card stat-indigo text-white">
-          <div class="card-body py-3">
-            <div class="d-flex align-items-start justify-content-between mb-3">
-              <div class="stat-icon"><i class="bi bi-kanban-fill"></i></div>
-              <span class="stat-badge"><?= $active_projects ?> active</span>
+        <a href="projects.php" class="text-decoration-none">
+          <div class="card stat-card stat-indigo text-white h-100" style="transition: transform .2s ease, box-shadow .2s ease; cursor: pointer;">
+            <div class="card-body py-3">
+              <div class="d-flex align-items-start justify-content-between mb-3">
+                <div class="stat-icon"><i class="bi bi-kanban-fill"></i></div>
+                <span class="stat-badge"><?= $active_projects ?> active</span>
+              </div>
+              <div class="stat-number"><?= $total_projects ?></div>
+              <div class="stat-label">Total Projects <i class="bi bi-arrow-right ms-1 opacity-75"></i></div>
             </div>
-            <div class="stat-number"><?= $total_projects ?></div>
-            <div class="stat-label">Total Projects</div>
           </div>
-        </div>
+        </a>
       </div>
       <div class="col-6 col-lg-3">
-        <div class="card stat-card stat-emerald text-white">
-          <div class="card-body py-3">
-            <div class="d-flex align-items-start justify-content-between mb-3">
-              <div class="stat-icon"><i class="bi bi-check2-circle"></i></div>
-              <span class="stat-badge"><?= $completion_pct ?>%</span>
+        <a href="tasks.php?status=done" class="text-decoration-none">
+          <div class="card stat-card stat-emerald text-white h-100" style="transition: transform .2s ease, box-shadow .2s ease; cursor: pointer;">
+            <div class="card-body py-3">
+              <div class="d-flex align-items-start justify-content-between mb-3">
+                <div class="stat-icon"><i class="bi bi-check2-circle"></i></div>
+                <span class="stat-badge"><?= $completion_pct ?>%</span>
+              </div>
+              <div class="stat-number"><?= $completed_tasks ?></div>
+              <div class="stat-label">Tasks Completed <i class="bi bi-arrow-right ms-1 opacity-75"></i></div>
             </div>
-            <div class="stat-number"><?= $completed_tasks ?></div>
-            <div class="stat-label">Tasks Completed</div>
           </div>
-        </div>
+        </a>
       </div>
       <div class="col-6 col-lg-3">
-        <div class="card stat-card stat-violet text-white">
-          <div class="card-body py-3">
-            <div class="d-flex align-items-start justify-content-between mb-3">
-              <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
-              <span class="stat-badge"><?= $online_count ?> online</span>
+        <a href="users.php" class="text-decoration-none">
+          <div class="card stat-card stat-violet text-white h-100" style="transition: transform .2s ease, box-shadow .2s ease; cursor: pointer;">
+            <div class="card-body py-3">
+              <div class="d-flex align-items-start justify-content-between mb-3">
+                <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+                <span class="stat-badge"><?= $online_count ?> online</span>
+              </div>
+              <div class="stat-number"><?= $total_users ?></div>
+              <div class="stat-label">Team Members <i class="bi bi-arrow-right ms-1 opacity-75"></i></div>
             </div>
-            <div class="stat-number"><?= $total_users ?></div>
-            <div class="stat-label">Team Members</div>
           </div>
-        </div>
+        </a>
       </div>
       <div class="col-6 col-lg-3">
-        <div class="card stat-card stat-amber text-white">
-          <div class="card-body py-3">
-            <div class="d-flex align-items-start justify-content-between mb-3">
-              <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
-              <span class="stat-badge">open</span>
+        <a href="tasks.php" class="text-decoration-none">
+          <div class="card stat-card stat-amber text-white h-100" style="transition: transform .2s ease, box-shadow .2s ease; cursor: pointer;">
+            <div class="card-body py-3">
+              <div class="d-flex align-items-start justify-content-between mb-3">
+                <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+                <span class="stat-badge">open</span>
+              </div>
+              <div class="stat-number"><?= $pending_tasks ?></div>
+              <div class="stat-label">Pending Tasks <i class="bi bi-arrow-right ms-1 opacity-75"></i></div>
             </div>
-            <div class="stat-number"><?= $pending_tasks ?></div>
-            <div class="stat-label">Open Tasks</div>
           </div>
-        </div>
+        </a>
       </div>
     </div>
 

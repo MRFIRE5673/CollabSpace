@@ -35,6 +35,23 @@
   // ─── Chat Auto-Refresh ───────────────────────────────────
   let lastChatMsgId = 0;
 
+  function playNotifSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } catch(e) {}
+  }
+
   function pollChat() {
     const chatContainer = document.getElementById('chat-messages-box');
     if (!chatContainer) return;
@@ -47,11 +64,20 @@
       .then(r => r.json())
       .then(messages => {
         if (!Array.isArray(messages) || messages.length === 0) return;
+        let hasIncoming = false;
         messages.forEach(msg => {
           if (msg.id > lastChatMsgId) lastChatMsgId = msg.id;
           appendMessage(msg, chatContainer);
+          if (!msg.is_mine) {
+            hasIncoming = true;
+            if (typeof showToast === 'function') {
+              showToast(`💬 ${msg.sender_name}: ${msg.message || 'Attached a file'}`, 'info');
+            }
+          }
         });
         chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        if (hasIncoming) playNotifSound();
 
         // Update unread count in sidebar
         const chatBadge = document.getElementById('sidebar-chat-badge');
