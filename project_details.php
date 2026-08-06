@@ -392,7 +392,7 @@ include __DIR__ . '/includes/header.php';
       $st_counts = ['todo'=>0, 'in_progress'=>0, 'in_review'=>0, 'done'=>0];
       $pr_counts = ['low'=>0, 'medium'=>0, 'high'=>0, 'urgent'=>0];
       $overdue_cnt = 0;
-      foreach ($all_tasks as $t) {
+      foreach ($tasks as $t) {
         if (isset($st_counts[$t['status']])) $st_counts[$t['status']]++;
         if (isset($pr_counts[$t['priority']])) $pr_counts[$t['priority']]++;
         if ($t['status'] !== 'done' && $t['due_date'] && strtotime($t['due_date']) < time()) $overdue_cnt++;

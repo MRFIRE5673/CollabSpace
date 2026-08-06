@@ -61,6 +61,37 @@ switch ($action) {
         echo json_encode(['success' => true]);
         break;
 
+    case 'add_member':
+        $pid = (int)($_POST['project_id'] ?? 0);
+        $user_id = (int)($_POST['user_id'] ?? 0);
+
+        if (!$pid || !$user_id) {
+            echo json_encode(['success' => false, 'message' => 'Please select a user to add.']);
+            exit;
+        }
+
+        $db->prepare("INSERT IGNORE INTO project_members (project_id, user_id) VALUES (?,?)")->execute([$pid, $user_id]);
+
+        $u_name = $db->query("SELECT name FROM users WHERE id=$user_id")->fetchColumn() ?: 'User';
+        log_activity($pid, $uid, 'member_added', "Added $u_name to project", 'project', $pid);
+
+        echo json_encode(['success' => true]);
+        break;
+
+    case 'remove_member':
+        $pid = (int)($_POST['project_id'] ?? 0);
+        $user_id = (int)($_POST['user_id'] ?? 0);
+
+        if (!$pid || !$user_id) {
+            echo json_encode(['success' => false, 'message' => 'Invalid parameters.']);
+            exit;
+        }
+
+        $db->prepare("DELETE FROM project_members WHERE project_id=? AND user_id=?")->execute([$pid, $user_id]);
+
+        echo json_encode(['success' => true]);
+        break;
+
     default:
         echo json_encode(['error' => 'Unknown action']);
 }
