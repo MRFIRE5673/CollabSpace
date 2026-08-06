@@ -1,7 +1,17 @@
-# Set default index file to index.php
-DirectoryIndex index.php index.html
+# ── Redirect index.html to index.php ─────────────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    RewriteRule ^index\.html$ index.php [R=301,L]
+</IfModule>
 
-# Prevent caching issues during active development
+# Fallback redirect if mod_rewrite not active
+Redirect 301 /index.html /index.php
+
+# Set default index file to index.php
+DirectoryIndex index.php
+
+# Prevent aggressive caching during active development
 <IfModule mod_headers.c>
     Header set Cache-Control "no-cache, no-store, must-revalidate"
     Header set Pragma "no-cache"
