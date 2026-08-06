@@ -65,50 +65,53 @@
   }
 
   // ─── Render a Message ────────────────────────────────────
+  // ─── Render a Message ────────────────────────────────────
   function appendMessage(msg, container) {
-    // Avoid duplicates
-    if (document.querySelector(`[data-msg-id="${msg.id}"]`)) return;
+    if (!msg || !msg.id) return;
+    // Avoid duplicates by checking both id and data-msg-id
+    if (document.getElementById(`msg-${msg.id}`) || document.querySelector(`[data-msg-id="${msg.id}"]`)) return;
 
-    const div = document.createElement('div');
     const isMine = msg.is_mine || msg.is_self;
-    div.className = `d-flex gap-2 ${isMine ? 'flex-row-reverse' : ''}`;
+    const div = document.createElement('div');
+    div.className = `chat-msg ${isMine ? 'mine' : ''}`;
+    div.id = `msg-${msg.id}`;
     div.dataset.msgId = msg.id;
 
-    const avatarColor = stringToColor(msg.sender_name || 'User');
     const initials = (msg.sender_name || 'U').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
 
-    const avatarHtml = msg.sender_avatar
-      ? `<img src="uploads/${escHtml(msg.sender_avatar)}" class="rounded-circle flex-shrink-0" style="width:34px;height:34px;object-fit:cover;" alt="">`
-      : `<div class="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center text-white fw-bold" style="width:34px;height:34px;background:${avatarColor};font-size:.75rem;">${initials}</div>`;
-
-    let contentHtml = '';
-    if (msg.message) {
-      contentHtml = `<div class="msg-bubble-inner">${escHtml(msg.message).replace(/\n/g,'<br>')}</div>`;
-    }
+    let attachHtml = '';
     if (msg.file_path) {
-      contentHtml += `<div class="mt-1"><a href="uploads/${escHtml(msg.file_path)}" class="btn btn-sm btn-outline-secondary" download><i class="bi bi-paperclip me-1"></i>${escHtml(msg.file_name || 'File')}</a></div>`;
+      attachHtml = `
+        <div class="chat-attachment d-flex align-items-center gap-2 mt-1">
+          <a href="raw_file.php?chat=1&file=${encodeURIComponent(msg.file_path)}" download="${escHtml(msg.file_name || msg.file_path)}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+            <i class="bi bi-download me-1"></i>${escHtml(msg.file_name || 'Download')}
+          </a>
+          <a href="raw_file.php?chat=1&file=${encodeURIComponent(msg.file_path)}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
+            <i class="bi bi-eye me-1"></i>View
+          </a>
+        </div>`;
     }
 
     div.innerHTML = `
-      ${!isMine ? avatarHtml : ''}
-      <div class="msg-bubble ${isMine ? 'msg-self' : 'msg-other'}">
-        ${!isMine ? `<div class="x-small text-muted mb-1">${escHtml(msg.sender_name)}</div>` : ''}
-        ${contentHtml}
-        <div class="msg-time">${msg.time_ago || ''}</div>
+      <div class="chat-avatar">${initials}</div>
+      <div class="chat-bubble">
+        <div class="chat-meta">
+          <span class="fw-semibold me-2">${escHtml(msg.sender_name)}</span>
+          <span>${escHtml(msg.time_ago || 'just now')}</span>
+        </div>
+        ${msg.message ? `<div class="chat-text">${escHtml(msg.message).replace(/\n/g,'<br>')}</div>` : ''}
+        ${attachHtml}
       </div>
-      ${isMine ? avatarHtml : ''}
     `;
     container.appendChild(div);
   }
 
-  // ─── Chat Send ───────────────────────────────────────────
-  // ─── Chat Send ───────────────────────────────────────────
+  // ─── Chat Send (with deduplication lock) ────────────────
+  let isSendingChat = false;
   window.sendChatMessage = function (form) {
     if (!form) form = document.getElementById('chat-form');
-    if (!form) return false;
+    if (!form || isSendingChat) return false;
 
-    const data = new FormData(form);
-    const container = document.getElementById('chat-messages-box');
     const msgInput = form.querySelector('textarea, input[name="message"]');
     const fileInput = form.querySelector('input[type="file"]');
     const preview = document.getElementById('chat-file-preview');
@@ -118,6 +121,10 @@
 
     if (!msgVal && !hasFile) return false;
 
+    isSendingChat = true;
+    const data = new FormData(form);
+    const container = document.getElementById('chat-messages-box') || document.getElementById('chat-messages-container');
+
     // Immediately clear inputs before fetch so user cannot double-submit
     if (msgInput) msgInput.value = '';
     if (fileInput) fileInput.value = '';
@@ -126,7 +133,8 @@
     fetch('api/chat.php?action=send', { method: 'POST', body: data })
       .then(r => r.json())
       .then(res => {
-        if (res.success) {
+        isSendingChat = false;
+        if (res.success && res.id) {
           lastChatMsgId = Math.max(lastChatMsgId, res.id || 0);
           if (res.message && container) {
             appendMessage({ ...res.message, is_mine: true }, container);
@@ -136,7 +144,10 @@
           showToast(res.message, 'danger');
         }
       })
-      .catch(() => showToast('Failed to send message.', 'danger'));
+      .catch(() => {
+        isSendingChat = false;
+        showToast('Failed to send message.', 'danger');
+      });
     return false;
   };
 

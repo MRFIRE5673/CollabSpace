@@ -73,6 +73,27 @@ switch ($action) {
             echo json_encode(['success' => false, 'message' => 'Empty message']); exit;
         }
 
+        // Backend Deduplication check: ignore duplicate message from same user within 3 seconds
+        if ($message && !$file_path) {
+            $dup = $db->prepare("
+                SELECT id FROM chats
+                WHERE sender_id = ? AND message = ? AND room_type = ?
+                  AND created_at >= NOW() - INTERVAL 3 SECOND
+                ORDER BY id DESC LIMIT 1
+            ");
+            $dup->execute([$uid, $message, $room_type]);
+            $existing_id = $dup->fetchColumn();
+            if ($existing_id) {
+                $existing = $db->prepare("SELECT c.*, u.name AS sender_name, u.avatar AS sender_avatar, 1 AS is_mine FROM chats c JOIN users u ON u.id=c.sender_id WHERE c.id=?");
+                $existing->execute([$existing_id]);
+                $msg = $existing->fetch();
+                $msg['time_ago'] = time_ago($msg['created_at']);
+                $msg['is_mine']  = true;
+                echo json_encode(['success' => true, 'id' => (int)$existing_id, 'message' => $msg]);
+                exit;
+            }
+        }
+
         $stmt = $db->prepare("INSERT INTO chats (project_id, room_type, sender_id, receiver_id, message, file_path, file_name) VALUES (?,?,?,?,?,?,?)");
         $stmt->execute([$project_id ?: null, $room_type, $uid, $receiver_id, $message ?: null, $file_path, $file_name]);
         $cid = $db->lastInsertId();
