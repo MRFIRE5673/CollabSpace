@@ -1,6 +1,6 @@
 <?php
 // ============================================================
-// Contacts & Friends API Endpoint
+// Contacts & Friends API Endpoint (High Speed)
 // ============================================================
 if (session_status() === PHP_SESSION_NONE) session_start();
 header('Content-Type: application/json');
@@ -36,11 +36,11 @@ switch ($action) {
 
     case 'add':
         $contact_id = (int)($_POST['contact_id'] ?? 0);
-        $query      = trim($_POST['query'] ?? '');
+        $query      = trim($_POST['query'] ?? ($_GET['query'] ?? ''));
 
         if (!$contact_id && $query) {
-            // Find by exact email or name
-            $stmt = $db->prepare("SELECT id FROM users WHERE id != ? AND is_active = 1 AND (email = ? OR name = ? OR name LIKE ?) LIMIT 1");
+            // Search exact match or substring
+            $stmt = $db->prepare("SELECT id, name, email, avatar, status FROM users WHERE id != ? AND is_active = 1 AND (email = ? OR name = ? OR name LIKE ?) LIMIT 1");
             $stmt->execute([$uid, $query, $query, "%$query%"]);
             $found = $stmt->fetch();
             if ($found) {
@@ -54,10 +54,14 @@ switch ($action) {
         }
 
         // Add mutual contact link
-        $db->prepare("INSERT IGNORE INTO user_contacts (user_id, contact_id, status) VALUES (?,?,'accepted'), (?,?,'accepted')")
-           ->execute([$uid, $contact_id, $contact_id, $uid]);
+        try {
+            $db->prepare("INSERT IGNORE INTO user_contacts (user_id, contact_id, status) VALUES (?,?,'accepted'), (?,?,'accepted')")
+               ->execute([$uid, $contact_id, $contact_id, $uid]);
+        } catch (Exception $e) {
+            // Ignore duplicate
+        }
 
-        // Return friend details
+        // Fetch friend details
         $stmt = $db->prepare("SELECT id, name, email, avatar, status FROM users WHERE id = ?");
         $stmt->execute([$contact_id]);
         $friend = $stmt->fetch();

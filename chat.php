@@ -490,7 +490,7 @@ async function handleAddContact(e) {
     formData.append('action', 'add');
     formData.append('query', query);
 
-    const res = await fetch('api/contacts.php', { method: 'POST', body: formData });
+    const res = await fetch('api/contacts.php?action=add', { method: 'POST', body: formData });
     const data = await res.json();
 
     if (data.success && data.contact) {

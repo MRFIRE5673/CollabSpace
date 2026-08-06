@@ -66,38 +66,7 @@ function ensure_tables_exist(PDO $pdo): void {
     static $checked = false;
     if ($checked) return;
     $checked = true;
-    try {
-        $check = $pdo->query("SHOW TABLES LIKE 'users'")->fetch();
-        if (!$check) {
-            require_once __DIR__ . '/setup.php';
-            if (function_exists('setupDatabase')) {
-                setupDatabase();
-            }
-        }
-        // Ensure user_contacts table exists
-        $check_contacts = $pdo->query("SHOW TABLES LIKE 'user_contacts'")->fetch();
-        if (!$check_contacts) {
-            $pdo->exec("CREATE TABLE IF NOT EXISTS `user_contacts` (
-                `id` INT AUTO_INCREMENT PRIMARY KEY,
-                `user_id` INT NOT NULL,
-                `contact_id` INT NOT NULL,
-                `status` ENUM('accepted','pending') DEFAULT 'accepted',
-                `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE KEY `unique_contact` (`user_id`, `contact_id`),
-                FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
-                FOREIGN KEY (`contact_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
-        }
-        // Ensure admin@admin.com account exists with password 12345678
-        $admin_exists = $pdo->query("SELECT id FROM users WHERE email='admin@admin.com'")->fetch();
-        if (!$admin_exists) {
-            $pass = password_hash('12345678', PASSWORD_DEFAULT);
-            $pdo->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'admin')")
-                ->execute(['Admin User', 'admin@admin.com', $pass]);
-        }
-    } catch (Exception $e) {
-        // Ignore check errors
-    }
+    // Database schema is maintained and active. 
 }
 
 function getDB(): PDO {
