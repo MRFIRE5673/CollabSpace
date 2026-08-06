@@ -152,12 +152,10 @@ include __DIR__ . '/includes/header.php';
     <!-- ─── BOARD TAB ─────────────────────────────────────── -->
     <?php if ($active_tab === 'board'): ?>
     <div class="d-flex align-items-center justify-content-between mb-3">
-      <h2 class="h6 fw-bold mb-0">Kanban Board</h2>
-      <?php if (is_manager()): ?>
+      <h2 class="h6 fw-bold mb-0"><i class="bi bi-kanban me-2 text-primary"></i>Kanban Board</h2>
       <button class="btn btn-primary btn-sm" onclick="openCreateTaskModal('todo')" id="add-task-btn">
         <i class="bi bi-plus-lg me-1"></i>Add Task
       </button>
-      <?php endif; ?>
     </div>
     <div class="kanban-wrapper">
       <?php
@@ -206,11 +204,9 @@ include __DIR__ . '/includes/header.php';
           </div>
           <?php endforeach; ?>
         </div>
-        <?php if (is_manager()): ?>
-        <button class="kanban-add-btn btn btn-link text-muted w-100 py-2 border-top" style="border-radius:0 0 16px 16px;font-size:.8rem;" id="kanban-add-<?= $status ?>">
+        <button class="kanban-add-btn btn btn-link text-muted w-100 py-2 border-top" style="border-radius:0 0 16px 16px;font-size:.8rem;" id="kanban-add-<?= $status ?>" onclick="openCreateTaskModal('<?= $status ?>')">
           <i class="bi bi-plus-lg me-1"></i>Add Task
         </button>
-        <?php endif; ?>
       </div>
       <?php endforeach; ?>
     </div>
@@ -280,7 +276,7 @@ include __DIR__ . '/includes/header.php';
                 <button type="submit" class="btn btn-primary btn-sm" id="chat-send-btn"><i class="bi bi-send-fill"></i></button>
               </div>
             </div>
-            <div id="chat-file-preview" class="mt-1 x-small text-muted"></div>
+            <div id="chat-file-preview" class="mt-2"></div>
           </form>
         </div>
       </div>
@@ -386,7 +382,6 @@ include __DIR__ . '/includes/header.php';
 </main>
 
 <!-- Create Task Modal -->
-<?php if (is_manager()): ?>
 <div class="modal fade" id="createTaskModal" tabindex="-1" aria-labelledby="createTaskModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -506,7 +501,6 @@ include __DIR__ . '/includes/header.php';
     </div>
   </div>
 </div>
-<?php endif; ?>
 
 <?php
 $page_scripts = <<<JS
@@ -527,11 +521,34 @@ if (dz) {
   });
 }
 
-// File attach preview
+// File attach preview with clear button
 const chatFileInput = document.getElementById('chat-file-input');
-if (chatFileInput) chatFileInput.addEventListener('change', function() {
-  document.getElementById('chat-file-preview').textContent = this.files[0] ? '📎 ' + this.files[0].name : '';
-});
+if (chatFileInput) {
+  chatFileInput.addEventListener('change', function() {
+    const preview = document.getElementById('chat-file-preview');
+    if (this.files && this.files[0]) {
+      preview.innerHTML = `
+        <span class="badge bg-primary bg-opacity-20 text-primary p-2 d-inline-flex align-items-center gap-2" style="font-size:.78rem;border-radius:8px;">
+          <i class="bi bi-paperclip"></i>
+          <span>${escapeHtml(this.files[0].name)}</span>
+          <button type="button" class="btn-close ms-1" style="font-size:.65rem;" onclick="clearChatFile()"></button>
+        </span>`;
+    } else {
+      preview.innerHTML = '';
+    }
+  });
+}
+
+function clearChatFile() {
+  const fi = document.getElementById('chat-file-input');
+  if (fi) fi.value = '';
+  const prev = document.getElementById('chat-file-preview');
+  if (prev) prev.innerHTML = '';
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
 
 // Submit create task via AJAX
 function submitCreateTask(e) {

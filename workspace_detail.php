@@ -134,8 +134,8 @@ include __DIR__ . '/includes/header.php';
                     <a href="project_details.php?id=<?= $p['id'] ?>" class="text-decoration-none text-body"><?= htmlspecialchars($p['name']) ?></a>
                   </h6>
                   <div class="d-flex gap-1 flex-wrap">
-                    <span class="badge bg-<?= $sc ?> bg-opacity-15 text-<?= $sc ?>" style="font-size:.65rem;"><?= str_replace('_',' ',ucfirst($p['status'])) ?></span>
-                    <span class="badge bg-<?= $pc ?> bg-opacity-15 text-<?= $pc ?>" style="font-size:.65rem;"><?= ucfirst($p['priority']) ?></span>
+                    <?= status_badge($p['status']) ?>
+                    <?= priority_badge($p['priority']) ?>
                   </div>
                 </div>
                 <a href="project_details.php?id=<?= $p['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style="font-size:.72rem;">Open</a>
@@ -186,10 +186,10 @@ include __DIR__ . '/includes/header.php';
                 <div class="x-small text-muted text-truncate"><?= htmlspecialchars($m['email']) ?></div>
               </div>
               <div class="d-flex align-items-center gap-2">
-                <span class="badge <?= $m['role']==='owner' ? 'bg-primary' : 'bg-secondary' ?> bg-opacity-15 <?= $m['role']==='owner' ? 'text-primary' : 'text-secondary' ?>" style="font-size:.62rem;"><?= ucfirst($m['role']) ?></span>
+                <span class="badge <?= $m['role']==='owner' ? 'bg-primary' : 'bg-info' ?>" style="font-size:.65rem;"><?= ucfirst($m['role']) ?></span>
                 <?php if ($isOwner && $m['id'] != $uid && $m['role'] !== 'owner'): ?>
-                <button class="btn btn-link text-danger p-0" onclick="removeMember(<?= $wid ?>, <?= $m['id'] ?>, '<?= htmlspecialchars(addslashes($m['name'])) ?>')" title="Remove member">
-                  <i class="bi bi-x-lg" style="font-size:.75rem;"></i>
+                <button class="btn btn-link text-danger p-0 border-0" onclick="removeMember(<?= $wid ?>, <?= $m['id'] ?>, '<?= htmlspecialchars(addslashes($m['name'])) ?>')" title="Remove member">
+                  <i class="bi bi-x-circle-fill" style="font-size:.9rem;"></i>
                 </button>
                 <?php endif; ?>
               </div>

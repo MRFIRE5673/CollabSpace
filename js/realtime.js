@@ -102,24 +102,41 @@
   }
 
   // ─── Chat Send ───────────────────────────────────────────
+  // ─── Chat Send ───────────────────────────────────────────
   window.sendChatMessage = function (form) {
+    if (!form) form = document.getElementById('chat-form');
+    if (!form) return false;
+
     const data = new FormData(form);
     const container = document.getElementById('chat-messages-box');
+    const msgInput = form.querySelector('textarea, input[name="message"]');
+    const fileInput = form.querySelector('input[type="file"]');
+    const preview = document.getElementById('chat-file-preview');
+
+    const msgVal = msgInput ? msgInput.value.trim() : '';
+    const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+    if (!msgVal && !hasFile) return false;
+
+    // Immediately clear inputs before fetch so user cannot double-submit
+    if (msgInput) msgInput.value = '';
+    if (fileInput) fileInput.value = '';
+    if (preview) preview.innerHTML = '';
 
     fetch('api/chat.php?action=send', { method: 'POST', body: data })
       .then(r => r.json())
       .then(res => {
         if (res.success) {
-          const input = form.querySelector('textarea, input[name="message"]');
-          if (input) input.value = '';
           lastChatMsgId = Math.max(lastChatMsgId, res.id || 0);
           if (res.message && container) {
             appendMessage({ ...res.message, is_mine: true }, container);
             container.scrollTop = container.scrollHeight;
           }
+        } else if (res.message) {
+          showToast(res.message, 'danger');
         }
       })
-      .catch(() => {});
+      .catch(() => showToast('Failed to send message.', 'danger'));
     return false;
   };
 
@@ -212,19 +229,16 @@
     pingStatus();
     setInterval(pingStatus, STATUS_PING_MS);
 
-    // Chat form enter-to-send
+    // Chat form enter-to-send (Only attach if not handled on page)
     const chatInput = document.getElementById('chat-input');
     const chatForm = document.getElementById('chat-form');
-    if (chatInput && chatForm) {
+    if (chatInput && chatForm && !chatForm.dataset.boundRealtime) {
+      chatForm.dataset.boundRealtime = '1';
       chatInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          chatForm.dispatchEvent(new Event('submit'));
+          sendChatMessage(chatForm);
         }
-      });
-      chatForm.addEventListener('submit', e => {
-        e.preventDefault();
-        sendChatMessage(chatForm);
       });
     }
   });

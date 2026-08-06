@@ -189,7 +189,6 @@ include __DIR__ . '/includes/header.php';
 </main>
 
 <!-- Create Task Modal -->
-<?php if (is_manager()): ?>
 <div class="modal fade" id="createTaskModal" tabindex="-1" aria-labelledby="createTaskModalLabelGlobal" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -254,7 +253,6 @@ include __DIR__ . '/includes/header.php';
     </div>
   </div>
 </div>
-<?php endif; ?>
 
 <?php
 $page_scripts = <<<JS
