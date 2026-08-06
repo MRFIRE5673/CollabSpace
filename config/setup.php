@@ -155,8 +155,18 @@ function setupDatabase(): void {
         `entity_type` VARCHAR(50) DEFAULT NULL,
         `entity_id` INT DEFAULT NULL,
         `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON DELETE SET NULL,
-        FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+
+    // User Contacts / Friends Table
+    $tables[] = "CREATE TABLE IF NOT EXISTS `user_contacts` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `user_id` INT NOT NULL,
+        `contact_id` INT NOT NULL,
+        `status` ENUM('accepted','pending') DEFAULT 'accepted',
+        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY `unique_contact` (`user_id`, `contact_id`),
+        FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+        FOREIGN KEY (`contact_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
 
     foreach ($tables as $sql) {
