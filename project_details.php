@@ -262,7 +262,7 @@ include __DIR__ . '/includes/header.php';
                   <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" download="<?= htmlspecialchars($m['file_name'] ?? $m['file_path']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
                     <i class="bi bi-download me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'Download') ?>
                   </a>
-                  <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
+                  <a href="view_file.php?file=<?= urlencode($m['file_path']) ?>" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
                     <i class="bi bi-eye me-1"></i>View
                   </a>
                 </div>

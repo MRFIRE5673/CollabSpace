@@ -11,16 +11,39 @@ $db   = getDB();
 $fid   = (int)($_GET['id'] ?? 0);
 $fname = trim($_GET['file'] ?? '');
 
+$file_rec = null;
+
 if ($fid) {
     $stmt = $db->prepare("SELECT f.*, u.name AS uploader_name, p.name AS project_name FROM files f JOIN users u ON u.id=f.uploaded_by LEFT JOIN projects p ON p.id=f.project_id WHERE f.id=?");
     $stmt->execute([$fid]);
     $file_rec = $stmt->fetch();
-} elseif ($fname) {
+}
+
+if (!$file_rec && $fname) {
     $stmt = $db->prepare("SELECT f.*, u.name AS uploader_name, p.name AS project_name FROM files f JOIN users u ON u.id=f.uploaded_by LEFT JOIN projects p ON p.id=f.project_id WHERE f.file_name=?");
     $stmt->execute([$fname]);
     $file_rec = $stmt->fetch();
-} else {
-    $file_rec = null;
+
+    if (!$file_rec) {
+        $cstmt = $db->prepare("SELECT c.id AS chat_id, c.file_path AS file_name, c.file_name AS original_name, c.created_at AS uploaded_at, u.name AS uploader_name, p.name AS project_name FROM chats c JOIN users u ON u.id=c.sender_id LEFT JOIN projects p ON p.id=c.project_id WHERE c.file_path=?");
+        $cstmt->execute([$fname]);
+        $chat_rec = $cstmt->fetch();
+
+        if ($chat_rec) {
+            $file_rec = $chat_rec;
+            $file_rec['id'] = 0;
+            if (empty($file_rec['original_name'])) $file_rec['original_name'] = $fname;
+        } elseif (file_exists(UPLOAD_DIR . $fname)) {
+            $file_rec = [
+                'id' => 0,
+                'file_name' => $fname,
+                'original_name' => $fname,
+                'uploader_name' => 'Attachment',
+                'uploaded_at' => date('Y-m-d H:i:s'),
+                'project_name' => null
+            ];
+        }
+    }
 }
 
 if (!$file_rec) {
@@ -29,15 +52,16 @@ if (!$file_rec) {
 }
 
 $file_name     = $file_rec['file_name'];
-$original_name = $file_rec['original_name'];
+$original_name = !empty($file_rec['original_name']) ? $file_rec['original_name'] : $file_name;
 $file_path     = UPLOAD_DIR . $file_name;
 $ext           = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
 
-// Build Public Raw URL
+// Build Public Raw Stream URL
+$raw_stream_src = 'raw_file.php?' . ($file_rec['id'] ? 'id=' . $file_rec['id'] : 'file=' . urlencode($file_name));
+
 $host_protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
 $current_host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$raw_file_url  = $host_protocol . $current_host . '/raw_file.php?id=' . $file_rec['id'];
-$direct_url    = $host_protocol . $current_host . '/uploads/' . rawurlencode($file_name);
+$raw_file_url  = $host_protocol . $current_host . '/' . $raw_stream_src;
 
 $page_title = 'Preview: ' . $original_name;
 include __DIR__ . '/includes/header.php';
@@ -48,18 +72,20 @@ include __DIR__ . '/includes/header.php';
 <!-- Client-side Document Engines -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" crossorigin="anonymous"></script>
 
 <div class="app-content-header py-3 px-4 border-bottom bg-body-tertiary">
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
     <div class="d-flex align-items-center gap-3">
-      <a href="files.php" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
-        <i class="bi bi-arrow-left me-1"></i> Back to Files
+      <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
+        <i class="bi bi-arrow-left me-1"></i> Back
       </a>
       <div>
         <h2 class="fw-bold mb-0 fs-5" style="font-family:'Outfit',sans-serif;"><?= htmlspecialchars($original_name) ?></h2>
         <div class="x-small text-muted">
-          Uploaded by <?= htmlspecialchars($file_rec['uploader_name']) ?> · <?= time_ago($file_rec['uploaded_at']) ?>
-          <?php if ($file_rec['project_name']): ?>
+          Uploaded by <?= htmlspecialchars($file_rec['uploader_name'] ?? 'System') ?>
+          <?php if (!empty($file_rec['uploaded_at'])): ?> · <?= time_ago($file_rec['uploaded_at']) ?><?php endif; ?>
+          <?php if (!empty($file_rec['project_name'])): ?>
           · <span class="badge bg-primary bg-opacity-10 text-primary"><?= htmlspecialchars($file_rec['project_name']) ?></span>
           <?php endif; ?>
         </div>
@@ -67,10 +93,10 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <div class="d-flex align-items-center gap-2">
-      <button onclick="navigator.clipboard.writeText('<?= $raw_file_url ?>'); alert('Direct link copied!');" class="btn btn-sm btn-outline-info rounded-pill px-3">
+      <button onclick="navigator.clipboard.writeText('<?= $raw_file_url ?>'); showToast('Direct link copied!', 'info');" class="btn btn-sm btn-outline-info rounded-pill px-3">
         <i class="bi bi-link-45deg me-1"></i> Share Link
       </button>
-      <a href="raw_file.php?id=<?= $file_rec['id'] ?>" download="<?= htmlspecialchars($original_name) ?>" class="btn btn-sm btn-primary rounded-pill px-3">
+      <a href="<?= $raw_stream_src ?>" download="<?= htmlspecialchars($original_name) ?>" class="btn btn-sm btn-primary rounded-pill px-3">
         <i class="bi bi-download me-1"></i> Download File
       </a>
     </div>
@@ -80,12 +106,12 @@ include __DIR__ . '/includes/header.php';
 <div class="app-content p-0 d-flex flex-column" style="height: calc(100vh - 128px); background: var(--cs-bg);">
 
   <?php if ($ext === 'docx'): ?>
-    <!-- ── High-Speed In-Browser Word (.docx) Renderer (Mammoth.js) ── -->
+    <!-- ── Word (.docx) Renderer (Mammoth.js) ── -->
     <div class="flex-grow-1 p-4 overflow-auto">
       <div class="card border-0 shadow-lg mx-auto" style="max-width:900px;border-radius:20px;background:var(--cs-surface);">
         <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between py-3 px-4" style="border-radius:20px 20px 0 0;">
           <div class="fw-bold"><i class="bi bi-file-earmark-word-fill text-primary me-2 fs-5"></i>Word Document Reader</div>
-          <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle-fill me-1"></i>Client Rendered</span>
+          <span class="badge bg-success bg-opacity-15 text-success"><i class="bi bi-check-circle-fill me-1"></i>In-Browser Reader</span>
         </div>
         <div class="card-body p-4 p-md-5">
           <div id="docx-output" class="document-render-area">
@@ -99,7 +125,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <script>
-      fetch('raw_file.php?id=<?= $file_rec['id'] ?>')
+      fetch('<?= $raw_stream_src ?>')
         .then(r => r.arrayBuffer())
         .then(arrayBuffer => mammoth.convertToHtml({ arrayBuffer: arrayBuffer }))
         .then(result => {
@@ -110,17 +136,17 @@ include __DIR__ . '/includes/header.php';
           document.getElementById('docx-output').innerHTML = `
             <div class="alert alert-warning text-center">
               <i class="bi bi-exclamation-triangle-fill fs-3 d-block mb-2"></i>
-              Direct rendering failed. <a href="raw_file.php?id=<?= $file_rec['id'] ?>" class="btn btn-sm btn-primary mt-2">Download Word File</a>
+              Direct rendering failed. <a href="<?= $raw_stream_src ?>" class="btn btn-sm btn-primary mt-2">Download Word File</a>
             </div>`;
         });
     </script>
 
-  <?php elseif (in_array($ext, ['xlsx', 'xls'])): ?>
-    <!-- ── High-Speed In-Browser Excel (.xlsx) Table Viewer (SheetJS) ── -->
+  <?php elseif (in_array($ext, ['xlsx', 'xls', 'csv'])): ?>
+    <!-- ── Excel & CSV Spreadsheet Viewer (SheetJS) ── -->
     <div class="flex-grow-1 p-4 overflow-auto">
       <div class="card border-0 shadow-lg mx-auto" style="max-width:1100px;border-radius:20px;background:var(--cs-surface);">
         <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between py-3 px-4" style="border-radius:20px 20px 0 0;">
-          <div class="fw-bold"><i class="bi bi-file-earmark-excel-fill text-success me-2 fs-5"></i>Excel Spreadsheet Reader</div>
+          <div class="fw-bold"><i class="bi bi-file-earmark-excel-fill text-success me-2 fs-5"></i>Spreadsheet Reader</div>
           <div id="excel-sheet-tabs" class="btn-group btn-group-sm"></div>
         </div>
         <div class="card-body p-4 overflow-auto">
@@ -135,14 +161,14 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <script>
-      fetch('raw_file.php?id=<?= $file_rec['id'] ?>')
+      fetch('<?= $raw_stream_src ?>')
         .then(r => r.arrayBuffer())
         .then(arrayBuffer => {
           const workbook = XLSX.read(arrayBuffer, { type: 'array' });
           const output = document.getElementById('excel-output');
           const tabs = document.getElementById('excel-sheet-tabs');
           
-          if (!workbook.SheetNames.length) {
+          if (!workbook.SheetNames || !workbook.SheetNames.length) {
             output.innerHTML = '<div class="text-muted text-center py-4">No sheets found in spreadsheet.</div>';
             return;
           }
@@ -170,19 +196,45 @@ include __DIR__ . '/includes/header.php';
 
   <?php elseif ($ext === 'pdf'): ?>
     <!-- ── High Definition Native PDF Viewer ── -->
-    <iframe src="raw_file.php?id=<?= $file_rec['id'] ?>" class="w-100 h-100 border-0"></iframe>
+    <iframe src="<?= $raw_stream_src ?>" class="w-100 h-100 border-0"></iframe>
 
-  <?php elseif (in_array($ext, ['jpg','jpeg','png','gif','webp','svg'])): ?>
+  <?php elseif ($ext === 'md'): ?>
+    <!-- ── Formatted Markdown Reader (Marked.js) ── -->
+    <div class="flex-grow-1 p-4 overflow-auto">
+      <div class="card border-0 shadow-lg mx-auto" style="max-width:900px;border-radius:20px;background:var(--cs-surface);">
+        <div class="card-header bg-body-tertiary py-3 px-4 fw-bold">
+          <i class="bi bi-markdown-fill text-info me-2 fs-5"></i>Markdown Reader
+        </div>
+        <div class="card-body p-4 p-md-5" id="md-output">
+          <div class="text-center py-5 text-muted">
+            <div class="spinner-border text-info spinner-border-sm mb-2"></div>
+            <div>Rendering Markdown...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      fetch('<?= $raw_stream_src ?>')
+        .then(r => r.text())
+        .then(text => {
+          document.getElementById('md-output').innerHTML = marked.parse(text);
+        })
+        .catch(() => {
+          document.getElementById('md-output').innerHTML = '<div class="alert alert-warning">Failed to load Markdown file.</div>';
+        });
+    </script>
+
+  <?php elseif (in_array($ext, ['jpg','jpeg','png','gif','webp','svg','bmp','ico'])): ?>
     <!-- ── Image Viewer ── -->
-    <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 overflow-auto">
-      <img src="raw_file.php?id=<?= $file_rec['id'] ?>" alt="<?= htmlspecialchars($original_name) ?>" class="img-fluid rounded-4 shadow-lg" style="max-height: 80vh; object-fit: contain;">
+    <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 overflow-auto bg-dark">
+      <img src="<?= $raw_stream_src ?>" alt="<?= htmlspecialchars($original_name) ?>" class="img-fluid rounded-3 shadow-lg" style="max-height: 80vh; object-fit: contain;">
     </div>
 
   <?php elseif (in_array($ext, ['doc','ppt','pptx'])): ?>
-    <!-- ── Office & Google Docs Viewer Fallback for Legacy Formats ── -->
+    <!-- ── Office & Google Docs Embedded Viewer ── -->
     <div class="flex-grow-1 d-flex flex-column h-100">
       <div class="bg-body-tertiary px-4 py-2 border-bottom d-flex align-items-center justify-content-between">
-        <span class="small text-muted"><i class="bi bi-file-earmark-slides me-1"></i>Document Viewer Service</span>
+        <span class="small text-muted"><i class="bi bi-file-earmark-slides me-1"></i>Document Reader Service</span>
         <div class="btn-group btn-group-sm">
           <button class="btn btn-outline-primary active" onclick="document.getElementById('viewer-iframe').src='https://docs.google.com/viewer?url=<?= urlencode($raw_file_url) ?>&embedded=true'">Google Reader</button>
           <button class="btn btn-outline-primary" onclick="document.getElementById('viewer-iframe').src='https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>'">Office Reader</button>
@@ -191,36 +243,41 @@ include __DIR__ . '/includes/header.php';
       <iframe id="viewer-iframe" src="https://docs.google.com/viewer?url=<?= urlencode($raw_file_url) ?>&embedded=true" class="w-100 h-100 border-0"></iframe>
     </div>
 
-  <?php elseif (in_array($ext, ['txt','json','csv','md','html','css','js','php','sql','xml','log'])): ?>
+  <?php elseif (in_array($ext, ['txt','json','html','css','js','php','sql','py','c','cpp','h','java','cs','sh','bat','env','yaml','yml','xml','log'])): ?>
     <!-- ── Text / Code Viewer ── -->
     <div class="flex-grow-1 p-4 overflow-auto">
       <div class="card border-0 shadow-sm mx-auto" style="max-width:1000px;border-radius:16px;background:var(--cs-surface);">
-        <div class="card-header bg-body-tertiary fw-bold small py-3 px-4">
-          <i class="bi bi-file-earmark-code me-2 text-primary"></i>Source Code / Text Content
+        <div class="card-header bg-body-tertiary fw-bold small py-3 px-4 d-flex align-items-center justify-content-between">
+          <span><i class="bi bi-file-earmark-code me-2 text-primary"></i>Source Code / Text Content</span>
+          <button class="btn btn-sm btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('code-content').textContent); showToast('Code copied to clipboard!', 'success');">
+            <i class="bi bi-clipboard me-1"></i> Copy Code
+          </button>
         </div>
         <div class="card-body p-0">
-          <pre class="p-4 m-0 font-monospace" style="font-size:.85rem;white-space:pre-wrap;word-break:break-word;color:var(--cs-text);"><?= htmlspecialchars(file_get_contents($file_path)) ?></pre>
+          <pre id="code-content" class="p-4 m-0 font-monospace" style="font-size:.85rem;white-space:pre-wrap;word-break:break-word;color:var(--cs-text);"><?= file_exists($file_path) ? htmlspecialchars(file_get_contents($file_path)) : 'File content unavailable.' ?></pre>
         </div>
       </div>
     </div>
 
-  <?php elseif (in_array($ext, ['mp4','webm'])): ?>
+  <?php elseif (in_array($ext, ['mp4','webm','ogv'])): ?>
     <!-- ── Video Player ── -->
-    <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4">
+    <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 bg-dark">
       <video controls class="w-100 rounded-4 shadow-lg" style="max-width:900px;max-height:75vh;">
-        <source src="raw_file.php?id=<?= $file_rec['id'] ?>" type="video/<?= $ext ?>">
+        <source src="<?= $raw_stream_src ?>" type="video/<?= $ext ?>">
         Your browser does not support HTML5 video player.
       </video>
     </div>
 
-  <?php elseif (in_array($ext, ['mp3','wav','ogg'])): ?>
+  <?php elseif (in_array($ext, ['mp3','wav','ogg','m4a','aac','flac'])): ?>
     <!-- ── Audio Player ── -->
     <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4">
-      <div class="card border-0 shadow p-4 text-center" style="border-radius:20px;max-width:500px;width:100%;">
-        <i class="bi bi-music-note-beamed text-primary fs-1 mb-3"></i>
+      <div class="card border-0 shadow-lg p-5 text-center" style="border-radius:24px;max-width:500px;width:100%;background:var(--cs-surface);">
+        <div class="rounded-circle bg-primary bg-opacity-15 text-primary mx-auto mb-4 d-flex align-items-center justify-content-center" style="width:72px;height:72px;">
+          <i class="bi bi-music-note-beamed fs-2"></i>
+        </div>
         <h5 class="fw-bold mb-3"><?= htmlspecialchars($original_name) ?></h5>
-        <audio controls class="w-100">
-          <source src="raw_file.php?id=<?= $file_rec['id'] ?>" type="audio/<?= $ext ?>">
+        <audio controls class="w-100 mt-2">
+          <source src="<?= $raw_stream_src ?>" type="audio/<?= $ext ?>">
           Your browser does not support HTML5 audio player.
         </audio>
       </div>
@@ -229,11 +286,13 @@ include __DIR__ . '/includes/header.php';
   <?php else: ?>
     <!-- ── Fallback Download ── -->
     <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 text-center">
-      <div class="card border-0 shadow p-5" style="border-radius:20px;max-width:500px;">
-        <i class="bi bi-file-earmark-arrow-down-fill text-primary fs-1 mb-3"></i>
+      <div class="card border-0 shadow-lg p-5" style="border-radius:24px;max-width:500px;background:var(--cs-surface);">
+        <div class="rounded-circle bg-primary bg-opacity-15 text-primary mx-auto mb-4 d-flex align-items-center justify-content-center" style="width:72px;height:72px;">
+          <i class="bi bi-file-earmark-arrow-down-fill fs-2"></i>
+        </div>
         <h5 class="fw-bold mb-2"><?= htmlspecialchars($original_name) ?></h5>
-        <p class="small text-muted mb-4">This file type (<?= strtoupper($ext) ?>) can be downloaded directly.</p>
-        <a href="raw_file.php?id=<?= $file_rec['id'] ?>" download="<?= htmlspecialchars($original_name) ?>" class="btn btn-primary py-2 px-4 rounded-pill">
+        <p class="small text-muted mb-4">This file format (<strong><?= strtoupper($ext) ?></strong>) can be downloaded directly to view on your device.</p>
+        <a href="<?= $raw_stream_src ?>" download="<?= htmlspecialchars($original_name) ?>" class="btn btn-primary py-2 px-4 rounded-pill fw-semibold">
           <i class="bi bi-download me-1"></i> Download File
         </a>
       </div>

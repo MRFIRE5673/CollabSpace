@@ -60,6 +60,16 @@ if ($fid) {
     $stmt = $db->prepare("SELECT * FROM files WHERE file_name = ?");
     $stmt->execute([$fname]);
     $file_rec = $stmt->fetch();
+    if (!$file_rec) {
+        $cstmt = $db->prepare("SELECT id, file_path AS file_name, file_name AS original_name FROM chats WHERE file_path = ?");
+        $cstmt->execute([$fname]);
+        $chat_rec = $cstmt->fetch();
+        if ($chat_rec) {
+            $file_rec = $chat_rec;
+        } elseif (file_exists(UPLOAD_DIR . $fname)) {
+            $file_rec = ['id' => 0, 'file_name' => $fname, 'original_name' => $fname];
+        }
+    }
 } else {
     $file_rec = null;
 }

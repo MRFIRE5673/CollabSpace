@@ -426,7 +426,7 @@ function appendMessageUI(m) {
       <a href="${fileUrl}" download="${escapeHtml(m.file_name || m.file_path)}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
         <i class="bi bi-download me-1"></i>${escapeHtml(m.file_name || 'Download')}
       </a>
-      <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
+      <a href="view_file.php?file=${encodeURIComponent(m.file_path)}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
         <i class="bi bi-eye me-1"></i>View
       </a>
     </div>`;
