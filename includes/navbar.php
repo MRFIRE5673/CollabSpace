@@ -54,7 +54,7 @@ $notifs = $notifs->fetchAll();
           <span class="toggle-icon" id="theme-icon-wrap">
             <i class="bi bi-moon-stars-fill" id="theme-icon"></i>
           </span>
-          <span class="theme-toggle-label" id="theme-label">Dark</span>
+          <span class="theme-toggle-label" id="theme-label">Dark Mode</span>
         </button>
       </li>
 

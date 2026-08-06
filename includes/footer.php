@@ -38,10 +38,10 @@ document.querySelectorAll('[data-lte-toggle="sidebar"]').forEach(el => {
     try { localStorage.setItem(KEY, t); } catch (_) {}
 
     if (icon) {
-      icon.className = t === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+      icon.className = t === 'dark' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
     }
     if (label) {
-      label.textContent = t === 'dark' ? 'Light' : 'Dark';
+      label.textContent = t === 'dark' ? 'Dark Mode' : 'Light Mode';
     }
   }
 
