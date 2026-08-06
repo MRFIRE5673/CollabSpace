@@ -103,9 +103,55 @@ include __DIR__ . '/includes/header.php';
   </div>
 </div>
 
-<div class="app-content p-0 d-flex flex-column" style="height: calc(100vh - 128px); background: var(--cs-bg);">
+<!-- Real-Time Collaboration Status Bar -->
+<div class="bg-body-tertiary border-bottom px-4 py-2 d-flex align-items-center justify-content-between flex-wrap gap-2" style="flex-shrink:0;">
+  <div class="d-flex align-items-center gap-2">
+    <span class="badge bg-success bg-opacity-15 text-success d-inline-flex align-items-center gap-1" id="collab-status-badge">
+      <span class="spinner-grow spinner-grow-sm me-1" style="width:8px;height:8px;"></span>
+      <span>Live Sync Active</span>
+    </span>
+    <span class="x-small text-muted ms-2" id="sync-last-saved">Auto-saved</span>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <button type="button" class="btn btn-sm btn-outline-primary active" id="btn-mode-editor" onclick="toggleCollabView('editor')">
+      <i class="bi bi-pencil-square me-1"></i>Real-Time Editor
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-mode-preview" onclick="toggleCollabView('preview')">
+      <i class="bi bi-eye me-1"></i>Formatted Reader
+    </button>
+  </div>
+</div>
 
-  <?php if (in_array($ext, ['docx', 'doc'])): ?>
+<div class="app-content p-0 d-flex flex-column" style="height: calc(100vh - 170px); background: var(--cs-bg);">
+
+  <!-- Real-Time Collaborative Live Editor Container -->
+  <div id="collab-editor-container" class="flex-grow-1 p-3 p-md-4 overflow-auto">
+    <div class="card border-0 shadow-lg mx-auto" style="max-width:1000px;border-radius:20px;background:var(--cs-surface);">
+      <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between py-3 px-4">
+        <div class="fw-bold d-flex align-items-center gap-2">
+          <i class="bi bi-pencil-fill text-primary"></i>
+          <span>Live Cross-Device Document Editor</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('live-doc-editor').value); showToast('Content copied to clipboard!', 'info');">
+            <i class="bi bi-clipboard me-1"></i>Copy Text
+          </button>
+          <button class="btn btn-sm btn-primary px-3" onclick="saveDocumentContent(true)">
+            <i class="bi bi-floppy me-1"></i> Save Document
+          </button>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <textarea id="live-doc-editor" class="form-control border-0 p-4 font-monospace"
+                  style="min-height:550px;font-size:.92rem;line-height:1.6;resize:vertical;background:transparent;color:var(--cs-text);"
+                  placeholder="Start typing to collaborate in real-time cross-device..."><?= file_exists($file_path) ? htmlspecialchars(file_get_contents($file_path)) : '' ?></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formatted Reader Container -->
+  <div id="collab-preview-container" class="d-none flex-column flex-grow-1 h-100">
+    <?php if (in_array($ext, ['docx', 'doc'])): ?>
     <!-- ── High Performance Word (.docx / .doc) Document Reader ── -->
     <div class="flex-grow-1 p-3 p-md-4 overflow-auto">
       <div class="card border-0 shadow-lg mx-auto" style="max-width:960px;border-radius:20px;background:var(--cs-surface);">
@@ -354,8 +400,109 @@ include __DIR__ . '/includes/header.php';
       </div>
     </div>
   <?php endif; ?>
+  </div><!-- /#collab-preview-container -->
 
 </div>
+
+<script>
+  let currentClientMtime = <?= file_exists($file_path) ? filemtime($file_path) : time() ?>;
+  let isUserTyping = false;
+  let autoSaveTimer = null;
+  const fileName = <?= json_encode($file_name) ?>;
+
+  function toggleCollabView(mode) {
+    const editorWrap  = document.getElementById('collab-editor-container');
+    const previewWrap = document.getElementById('collab-preview-container');
+    const btnEdit     = document.getElementById('btn-mode-editor');
+    const btnPrev     = document.getElementById('btn-mode-preview');
+
+    if (mode === 'editor') {
+      editorWrap.classList.remove('d-none');
+      previewWrap.classList.add('d-none');
+      previewWrap.classList.remove('d-flex');
+      btnEdit.classList.add('active');
+      btnPrev.classList.remove('active');
+    } else {
+      editorWrap.classList.add('d-none');
+      previewWrap.classList.remove('d-none');
+      previewWrap.classList.add('d-flex');
+      btnEdit.classList.remove('active');
+      btnPrev.classList.add('active');
+    }
+  }
+
+  const liveEditor = document.getElementById('live-doc-editor');
+  if (liveEditor) {
+    liveEditor.addEventListener('input', function() {
+      isUserTyping = true;
+      updateSyncStatus('⚡ Typing changes...', 'warning');
+      clearTimeout(autoSaveTimer);
+      autoSaveTimer = setTimeout(() => {
+        saveDocumentContent(false);
+      }, 600);
+    });
+
+    liveEditor.addEventListener('blur', function() {
+      isUserTyping = false;
+    });
+  }
+
+  function updateSyncStatus(text, type='success') {
+    const badge = document.getElementById('collab-status-badge');
+    if (badge) {
+      badge.className = `badge bg-${type} bg-opacity-15 text-${type} d-inline-flex align-items-center gap-1`;
+      badge.innerHTML = `<span class="spinner-grow spinner-grow-sm text-${type} me-1" style="width:8px;height:8px;"></span><span>${text}</span>`;
+    }
+  }
+
+  async function saveDocumentContent(isManual = false) {
+    if (!liveEditor) return;
+    const content = liveEditor.value;
+    updateSyncStatus('Syncing to server...', 'info');
+
+    const fd = new FormData();
+    fd.append('file', fileName);
+    fd.append('content', content);
+
+    try {
+      const res = await fetch('api/documents.php?action=save', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        currentClientMtime = data.last_modified;
+        isUserTyping = false;
+        updateSyncStatus('Live Sync Active', 'success');
+        document.getElementById('sync-last-saved').textContent = 'Saved just now';
+        if (isManual) showToast('Document saved!', 'success');
+      } else {
+        updateSyncStatus('Save failed', 'danger');
+      }
+    } catch (err) {
+      updateSyncStatus('Offline / Retry', 'danger');
+    }
+  }
+
+  async function pollDocumentSync() {
+    if (isUserTyping) return;
+    try {
+      const res = await fetch(`api/documents.php?action=poll&file=${encodeURIComponent(fileName)}&client_mtime=${currentClientMtime}`);
+      const data = await res.json();
+
+      if (data.has_changes && data.content !== undefined) {
+        currentClientMtime = data.last_modified;
+        if (liveEditor && liveEditor.value !== data.content) {
+          const start = liveEditor.selectionStart;
+          const end   = liveEditor.selectionEnd;
+          liveEditor.value = data.content;
+          liveEditor.setSelectionRange(start, end);
+          updateSyncStatus('Synced remote edit!', 'info');
+          setTimeout(() => updateSyncStatus('Live Sync Active', 'success'), 1200);
+        }
+      }
+    } catch (err) {}
+  }
+
+  setInterval(pollDocumentSync, 1500);
+</script>
 
 <style>
 .document-render-area {
