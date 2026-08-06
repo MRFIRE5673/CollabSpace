@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // ─── Projects Page ───────────────────────────────────────────
 $page_title = 'Projects';
 require_once __DIR__ . '/includes/auth.php';
@@ -221,13 +221,11 @@ include __DIR__ . '/includes/header.php';
   </div>
 </main>
 
-<!-- Create Project Modal -->
-<?php if (is_manager()): ?>
+<!-- Create Project Modal (AJAX — no page reload) -->
 <div class="modal fade" id="createProjectModal" tabindex="-1" aria-labelledby="createProjectModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <form method="POST" id="create-project-form">
-        <input type="hidden" name="action" value="create">
+    <div class="modal-content border-0 shadow-lg" style="border-radius:20px;">
+      <form id="create-project-form" onsubmit="return handleCreateProject(event)">
         <div class="modal-header border-0 pb-0">
           <h4 class="modal-title h5 fw-bold" id="createProjectModalLabel"><i class="bi bi-plus-circle-fill me-2 text-primary"></i>Create New Project</h4>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -286,6 +284,7 @@ include __DIR__ . '/includes/header.php';
               </select>
             </div>
           </div>
+          <div id="project-create-status" class="mt-3"></div>
         </div>
         <div class="modal-footer border-0 pt-0">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -295,6 +294,75 @@ include __DIR__ . '/includes/header.php';
     </div>
   </div>
 </div>
-<?php endif; ?>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php
+$page_scripts = <<<'PGJS'
+<script>
+async function handleCreateProject(e) {
+  e.preventDefault();
+  const btn    = document.getElementById('create-project-submit');
+  const status = document.getElementById('project-create-status');
+  const form   = document.getElementById('create-project-form');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Creating...';
+
+  const fd = new FormData(form);
+  fd.append('action', 'create');
+
+  try {
+    const res  = await fetch('api/projects.php?action=create', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.success && data.project) {
+      const p   = data.project;
+      let grid  = document.getElementById('projects-grid');
+      const emptyState = document.getElementById('projects-empty-state');
+      if (emptyState) emptyState.classList.add('d-none');
+      if (!grid) {
+        grid = document.createElement('div');
+        grid.className = 'row g-4';
+        grid.id = 'projects-grid';
+        document.querySelector('.app-content').appendChild(grid);
+      }
+      const statusMap    = {planning:'info',active:'primary',on_hold:'warning',completed:'success',cancelled:'danger'};
+      const priorityMap  = {low:'success',medium:'info',high:'warning',critical:'danger'};
+      const sc = statusMap[p.status] || 'secondary';
+      const pc = priorityMap[p.priority] || 'secondary';
+      const col = document.createElement('div');
+      col.className = 'col-sm-6 col-lg-4';
+      col.id = 'project-card-' + p.id;
+      col.innerHTML = `
+        <div class="card h-100 border-0 shadow-sm position-relative overflow-hidden" style="border-radius:16px;background:var(--cs-surface);">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-start justify-content-between mb-3">
+              <span class="badge bg-${sc} bg-opacity-15 text-${sc} fw-semibold">${p.status.replace('_',' ')}</span>
+              <span class="badge bg-${pc} bg-opacity-15 text-${pc} fw-semibold">${p.priority}</span>
+            </div>
+            <h6 class="fw-bold mb-1">${escHtml(p.name)}</h6>
+            <p class="small text-muted mb-3">${escHtml(p.description || '')}</p>
+            <div class="progress mb-3" style="height:6px;border-radius:99px;"><div class="progress-bar bg-primary" style="width:0%"></div></div>
+            <div class="d-flex justify-content-between x-small text-muted">
+              <span>0/0 tasks</span><span>${escHtml(p.manager_name)}</span>
+            </div>
+          </div>
+          <a href="project_details.php?id=${p.id}" class="stretched-link"></a>
+        </div>`;
+      grid.prepend(col);
+      form.reset();
+      bootstrap.Modal.getInstance(document.getElementById('createProjectModal')).hide();
+    } else {
+      status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">${data.message || 'Create failed.'}</div>`;
+    }
+  } catch(err) {
+    status.innerHTML = `<div class="alert alert-danger py-2 small mb-0">Connection error.</div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Create Project';
+  return false;
+}
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+PGJS;
+include __DIR__ . '/includes/footer.php';
+?>
+

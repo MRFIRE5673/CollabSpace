@@ -2,11 +2,54 @@
 // ============================================================
 // Raw File Streamer — High Performance Public Streamer
 // Enables Microsoft Office, Google Docs, & Browser Viewers
+// Also serves chat-uploaded files by filename
 // ============================================================
 require_once __DIR__ . '/config/database.php';
 
-$fid   = (int)($_GET['id'] ?? 0);
-$fname = basename(trim($_GET['file'] ?? ''));
+$fid      = (int)($_GET['id'] ?? 0);
+$fname    = basename(trim($_GET['file'] ?? ''));
+$chatMode = isset($_GET['chat']) && $_GET['chat'] == '1';
+
+$mime_map = [
+    'pdf'  => 'application/pdf',
+    'jpg'  => 'image/jpeg', 'jpeg' => 'image/jpeg',
+    'png'  => 'image/png',  'gif'  => 'image/gif',
+    'webp' => 'image/webp', 'svg'  => 'image/svg+xml',
+    'txt'  => 'text/plain; charset=utf-8',
+    'csv'  => 'text/plain; charset=utf-8',
+    'json' => 'application/json',
+    'mp4'  => 'video/mp4',  'webm' => 'video/webm',
+    'mp3'  => 'audio/mpeg', 'wav'  => 'audio/wav',
+    'doc'  => 'application/msword',
+    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls'  => 'application/vnd.ms-excel',
+    'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ppt'  => 'application/vnd.ms-powerpoint',
+    'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'zip'  => 'application/zip',
+    'rar'  => 'application/x-rar-compressed',
+];
+
+// ── Chat file mode: stream by raw filename from uploads/ ──────
+if ($chatMode && $fname) {
+    $file_path    = UPLOAD_DIR . $fname;
+    $display_name = $fname;
+    if (!file_exists($file_path)) {
+        http_response_code(404);
+        echo 'Chat file not found.';
+        exit;
+    }
+    $ext  = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
+    $mime = $mime_map[$ext] ?? 'application/octet-stream';
+    header("Content-Type: $mime");
+    header('Content-Disposition: inline; filename="' . rawurlencode($display_name) . '"');
+    header('Content-Length: ' . filesize($file_path));
+    header('Cache-Control: private, max-age=3600');
+    readfile($file_path);
+    exit;
+}
+
+
 
 $db = getDB();
 if ($fid) {

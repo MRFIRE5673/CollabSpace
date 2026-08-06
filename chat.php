@@ -187,9 +187,14 @@ include __DIR__ . '/includes/header.php';
             <div class="chat-text"><?= nl2br(htmlspecialchars($m['message'])) ?></div>
             <?php endif; ?>
             <?php if ($m['file_path']): ?>
-            <a href="uploads/<?= htmlspecialchars($m['file_path']) ?>" class="chat-attachment" target="_blank">
-              <i class="bi bi-paperclip me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'File') ?>
-            </a>
+            <div class="chat-attachment d-flex align-items-center gap-2 mt-1">
+              <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" download="<?= htmlspecialchars($m['file_name'] ?? $m['file_path']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+                <i class="bi bi-download me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'Download') ?>
+              </a>
+              <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+            </div>
             <?php endif; ?>
           </div>
         </div>
@@ -281,6 +286,7 @@ $page_scripts = <<<JS
 let lastMsgId = {$last_id};
 let currentRoomType = "{$room_type}";
 let currentRoomId = {$room_id};
+let isSwitching = false; // Mutex: prevent polling race during room switch
 const chatContainer = document.getElementById('chat-messages-container');
 
 function scrollToBottom() {
@@ -293,6 +299,9 @@ scrollToBottom();
 // In-Page Dynamic SPA Room Switcher (No Page Reload)
 async function switchRoom(type, id, name) {
   if (!id) return;
+  if (isSwitching) return; // Prevent concurrent switches
+  isSwitching = true;
+
   currentRoomType = type;
   currentRoomId = id;
   lastMsgId = 0;
@@ -354,6 +363,8 @@ async function switchRoom(type, id, name) {
     scrollToBottom();
   } catch (err) {
     console.error('Error fetching room messages:', err);
+  } finally {
+    isSwitching = false; // Release mutex
   }
 }
 
@@ -411,9 +422,15 @@ function appendMessageUI(m) {
   
   let fileHtml = '';
   if (m.file_path) {
-    fileHtml = `<a href="uploads/\${m.file_path}" class="chat-attachment" target="_blank">
-      <i class="bi bi-paperclip me-1"></i>\${escapeHtml(m.file_name || 'File')}
-    </a>`;
+    const fileUrl = `raw_file.php?chat=1&file=\${encodeURIComponent(m.file_path)}`;
+    fileHtml = `<div class="chat-attachment d-flex align-items-center gap-2 mt-1">
+      <a href="\${fileUrl}" download="\${escapeHtml(m.file_name || m.file_path)}" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+        <i class="bi bi-download me-1"></i>\${escapeHtml(m.file_name || 'Download')}
+      </a>
+      <a href="\${fileUrl}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
+        <i class="bi bi-eye me-1"></i>View
+      </a>
+    </div>`;
   }
   
   div.innerHTML = `
@@ -446,6 +463,7 @@ function escapeHtml(str) {
 // Seamless Background Live Message Polling (Every 1.5 Seconds)
 async function pollNewMessages() {
   if (!currentRoomId) return;
+  if (isSwitching) return; // Do not poll while switching rooms
   try {
     let url = `api/chat.php?action=fetch&after_id=\${lastMsgId}&room_type=\${currentRoomType}`;
     if (currentRoomType === 'direct') {
