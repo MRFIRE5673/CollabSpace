@@ -1,24 +1,40 @@
 <?php
 // ============================================================
 // Database Configuration — Environment-aware
-// Supports: local dev, Railway, PlanetScale, Cloud SQL, etc.
+// Supports: Railway, PlanetScale, Cloud Run, Docker & Local Dev
 // ============================================================
 
-// ── Read from environment variables (set on your host) ──────
-// Falls back to local dev defaults if not set
-define('DB_HOST',    getenv('DB_HOST')    ?: 'localhost');
-define('DB_NAME',    getenv('DB_NAME')    ?: 'collab_workspace');
-define('DB_USER',    getenv('DB_USER')    ?: 'root');
-define('DB_PASS',    getenv('DB_PASS')    ?: '5673');
-define('DB_PORT',    getenv('DB_PORT')    ?: '3306');
+// Support Railway MYSQL_URL format if available (mysql://user:pass@host:port/dbname)
+$mysql_url = getenv('MYSQL_URL') ?: (getenv('MYSQLURL') ?: '');
+
+if ($mysql_url) {
+    $db_parts = parse_url($mysql_url);
+    $env_host = $db_parts['host'] ?? 'localhost';
+    $env_port = (string)($db_parts['port'] ?? 3306);
+    $env_user = $db_parts['user'] ?? 'root';
+    $env_pass = $db_parts['pass'] ?? '';
+    $env_name = ltrim($db_parts['path'] ?? 'collab_workspace', '/');
+} else {
+    $env_host = getenv('DB_HOST') ?: (getenv('MYSQLHOST') ?: 'localhost');
+    $env_port = getenv('DB_PORT') ?: (getenv('MYSQLPORT') ?: '3306');
+    $env_name = getenv('DB_NAME') ?: (getenv('MYSQLDATABASE') ?: 'collab_workspace');
+    $env_user = getenv('DB_USER') ?: (getenv('MYSQLUSER') ?: 'root');
+    $env_pass = getenv('DB_PASS') ?: (getenv('MYSQLPASSWORD') ?: '5673');
+}
+
+define('DB_HOST',    $env_host);
+define('DB_PORT',    $env_port);
+define('DB_NAME',    $env_name);
+define('DB_USER',    $env_user);
+define('DB_PASS',    $env_pass);
 define('DB_CHARSET', 'utf8mb4');
 
 // ── App config ───────────────────────────────────────────────
-define('APP_URL',       getenv('APP_URL')    ?: 'http://localhost');
-define('APP_ENV',       getenv('APP_ENV')    ?: 'local');          // local | production
-define('SESSION_SECRET',getenv('SESSION_SECRET') ?: 'changeme-dev-secret-123');
+define('APP_URL',        getenv('APP_URL')       ?: 'http://localhost');
+define('APP_ENV',        getenv('APP_ENV')       ?: 'local');
+define('SESSION_SECRET', getenv('SESSION_SECRET')?: 'collabspace-dev-secret-123');
 
-// ── Uploads (works locally and on Railway/Cloud Run volumes) ─
+// ── Uploads ──────────────────────────────────────────────────
 define('UPLOAD_DIR',         __DIR__ . '/../uploads/');
 define('MAX_UPLOAD_SIZE',    20 * 1024 * 1024);  // 20 MB
 define('ALLOWED_EXTENSIONS', ['jpg','jpeg','png','gif','pdf','doc','docx','xls','xlsx','ppt','pptx','txt','zip','rar','mp4','mp3']);
@@ -50,20 +66,19 @@ function getDB(): PDO {
                 $tmp = new PDO($dsn_no_db, DB_USER, DB_PASS, $options);
                 $tmp->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
                 $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+                return $pdo;
             } catch (PDOException $e2) {
-                die(json_encode(['error' => 'DB connection failed: ' . $e2->getMessage()]));
+                throw new PDOException("Database connection failed: " . $e2->getMessage());
             }
-        } else {
-            // In production, show a friendly error
-            http_response_code(503);
-            die('<h2 style="font-family:sans-serif;text-align:center;padding:2rem;">Service temporarily unavailable. Please try again later.</h2>');
         }
+        // Throw exception so calling pages can catch or handle gracefully
+        throw new PDOException("Database connection failed: " . $e->getMessage());
     }
 
     return $pdo;
 }
 
-// ── Ensure uploads directory exists (local) ──────────────────
+// ── Ensure uploads directory exists ──────────────────────────
 if (!is_dir(UPLOAD_DIR)) {
     @mkdir(UPLOAD_DIR, 0755, true);
     @file_put_contents(UPLOAD_DIR . '.htaccess', "Options -Indexes\nAddType application/octet-stream .php .php3 .phtml\n");
