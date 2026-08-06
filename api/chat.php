@@ -73,23 +73,25 @@ switch ($action) {
             echo json_encode(['success' => false, 'message' => 'Empty message']); exit;
         }
 
-        // Backend Deduplication check: ignore duplicate message from same user within 3 seconds
+        // Backend Deduplication check: ignore duplicate message from same user if sent within 10 seconds
         if ($message && !$file_path) {
             $dup = $db->prepare("
-                SELECT id FROM chats
-                WHERE sender_id = ? AND message = ? AND room_type = ?
-                  AND created_at >= NOW() - INTERVAL 3 SECOND
+                SELECT id, message, TIMESTAMPDIFF(SECOND, created_at, NOW()) AS sec_diff
+                FROM chats
+                WHERE sender_id = ? AND room_type = ?
                 ORDER BY id DESC LIMIT 1
             ");
-            $dup->execute([$uid, $message, $room_type]);
-            $existing_id = $dup->fetchColumn();
-            if ($existing_id) {
+            $dup->execute([$uid, $room_type]);
+            $last_chat = $dup->fetch();
+
+            if ($last_chat && $last_chat['message'] === $message && (int)$last_chat['sec_diff'] <= 10) {
+                $existing_id = (int)$last_chat['id'];
                 $existing = $db->prepare("SELECT c.*, u.name AS sender_name, u.avatar AS sender_avatar, 1 AS is_mine FROM chats c JOIN users u ON u.id=c.sender_id WHERE c.id=?");
                 $existing->execute([$existing_id]);
                 $msg = $existing->fetch();
                 $msg['time_ago'] = time_ago($msg['created_at']);
                 $msg['is_mine']  = true;
-                echo json_encode(['success' => true, 'id' => (int)$existing_id, 'message' => $msg]);
+                echo json_encode(['success' => true, 'id' => $existing_id, 'message' => $msg]);
                 exit;
             }
         }

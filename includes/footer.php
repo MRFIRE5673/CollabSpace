@@ -12,8 +12,8 @@
 <!-- Dragula (drag-and-drop) -->
 <script src="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.js" crossorigin="anonymous"></script>
 <!-- Custom JS -->
-<script src="js/realtime.js"></script>
-<script src="js/kanban.js"></script>
+<script src="js/realtime.js?v=<?= time() ?>"></script>
+<script src="js/kanban.js?v=<?= time() ?>"></script>
 
 <script>
 // ─── Sidebar Toggle ───────────────────────────────────────
