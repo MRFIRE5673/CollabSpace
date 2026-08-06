@@ -297,10 +297,9 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-$ws_id_js = $wid;
-$page_scripts = <<<JS
+$ws_init = "<script>const WS_ID = " . (int)$wid . ";</script>";
+$page_scripts = $ws_init . <<<'JS'
 <script>
-const WS_ID = {$ws_id_js};
 
 // Create Project AJAX
 async function handleCreateProject(e) {

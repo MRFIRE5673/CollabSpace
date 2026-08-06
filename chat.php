@@ -281,11 +281,9 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-$page_scripts = <<<JS
+$init_vars = "<script>let lastMsgId = " . (int)$last_id . "; let currentRoomType = " . json_encode($room_type) . "; let currentRoomId = " . (int)$room_id . ";</script>";
+$page_scripts = $init_vars . <<<'JS'
 <script>
-let lastMsgId = {$last_id};
-let currentRoomType = "{$room_type}";
-let currentRoomId = {$room_id};
 let isSwitching = false; // Mutex: prevent polling race during room switch
 const chatContainer = document.getElementById('chat-messages-container');
 

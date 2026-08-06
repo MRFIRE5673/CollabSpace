@@ -503,7 +503,7 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-$page_scripts = <<<JS
+$page_scripts = <<<'JS'
 <script>
 function showFilename(input) {
   document.getElementById('file-selected').textContent = input.files[0]?.name || '';

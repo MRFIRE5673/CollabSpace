@@ -255,7 +255,7 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-$page_scripts = <<<JS
+$page_scripts = <<<'JS'
 <script>
 function submitGlobalTask(e) {
   e.preventDefault();

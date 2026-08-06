@@ -316,7 +316,7 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-$page_scripts = <<<JS
+$page_scripts = <<<'JS'
 <script>
 // Copy share link helper
 function copyShareLink(path) {

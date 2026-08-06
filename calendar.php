@@ -191,7 +191,7 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-$page_scripts = <<<JS
+$page_scripts = <<<'JS'
 <script>
 function showEventDetail(id, title, project, status, priority, date, projectId) {
   document.getElementById('event-modal-title').textContent = title;
