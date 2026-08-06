@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // ─── Projects Page ───────────────────────────────────────────
 $page_title = 'Projects';
 require_once __DIR__ . '/includes/auth.php';
@@ -7,32 +7,9 @@ $user = current_user();
 $uid  = $user['id'];
 $db   = getDB();
 
-// Handle create / edit / delete
+// Handle POST (legacy fallback — AJAX preferred)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
-
-    if ($action === 'create') {
-        $name        = trim($_POST['name'] ?? '');
-        $description = trim($_POST['description'] ?? '');
-        $status      = $_POST['status'] ?? 'planning';
-        $priority    = $_POST['priority'] ?? 'medium';
-        $start_date  = $_POST['start_date'] ?: null;
-        $due_date    = $_POST['due_date'] ?: null;
-        $manager_id  = (int)($_POST['manager_id'] ?? $uid);
-        $ws_id       = (int)($_POST['workspace_id'] ?? 0) ?: null;
-        if ($name) {
-            $stmt = $db->prepare("INSERT INTO projects (workspace_id, name, description, status, priority, start_date, due_date, manager_id, created_by) VALUES (?,?,?,?,?,?,?,?,?)");
-            $stmt->execute([$ws_id, $name, $description, $status, $priority, $start_date, $due_date, $manager_id, $uid]);
-            $pid = $db->lastInsertId();
-            // Add creator as member
-            $db->prepare("INSERT IGNORE INTO project_members (project_id, user_id) VALUES (?,?)")->execute([$pid, $uid]);
-            if ($manager_id != $uid) $db->prepare("INSERT IGNORE INTO project_members (project_id, user_id) VALUES (?,?)")->execute([$pid, $manager_id]);
-            log_activity($pid, $uid, 'project_created', "Created project: $name", 'project', $pid);
-        }
-        header('Location: projects.php');
-        exit;
-    }
-
     if ($action === 'delete') {
         $pid = (int)($_POST['project_id'] ?? 0);
         if ($pid && is_admin()) {
@@ -75,19 +52,16 @@ $stmt->execute($params);
 $projects = $stmt->fetchAll();
 
 // Fetch all users for manager dropdown
-$all_users = $db->query("SELECT id, name, role FROM users WHERE is_active=1 ORDER BY name")->fetchAll();
+$all_users  = $db->query("SELECT id, name, role FROM users WHERE is_active=1 ORDER BY name")->fetchAll();
 $workspaces = $db->query("SELECT * FROM workspaces ORDER BY name")->fetchAll();
 
-$status_colors = [
-    'planning'=>'info','active'=>'primary','on_hold'=>'warning','completed'=>'success','cancelled'=>'danger'
-];
+$status_colors   = ['planning'=>'info','active'=>'primary','on_hold'=>'warning','completed'=>'success','cancelled'=>'danger'];
 $priority_colors = ['low'=>'success','medium'=>'info','high'=>'warning','critical'=>'danger'];
 
 include __DIR__ . '/includes/header.php';
 ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 <?php include __DIR__ . '/includes/navbar.php'; ?>
-
 
   <div class="app-content-header py-3 px-4 border-bottom">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -133,19 +107,17 @@ include __DIR__ . '/includes/header.php';
 
     <!-- Projects Grid -->
     <?php if (empty($projects)): ?>
-    <div class="text-center py-5">
+    <div class="text-center py-5" id="projects-empty-state">
       <i class="bi bi-kanban fs-1 d-block mb-3 opacity-25"></i>
       <h5 class="text-muted">No projects found</h5>
-      <?php if (is_manager()): ?>
       <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#createProjectModal">Create your first project</button>
-      <?php endif; ?>
     </div>
     <?php else: ?>
     <div class="row g-3" id="projects-grid">
       <?php foreach ($projects as $p): ?>
       <?php
-        $done_pct = $p['task_count'] > 0 ? round(($p['done_count']/$p['task_count'])*100) : $p['progress'];
-        $col = $priority_colors[$p['priority']] ?? 'secondary';
+        $done_pct = $p['task_count'] > 0 ? round(($p['done_count']/$p['task_count'])*100) : ($p['progress'] ?? 0);
+        $pcol = $priority_colors[$p['priority']] ?? 'secondary';
       ?>
       <div class="col-sm-6 col-lg-4" id="project-card-<?= $p['id'] ?>">
         <div class="card h-100 position-relative overflow-hidden">
@@ -320,12 +292,12 @@ async function handleCreateProject(e) {
       if (emptyState) emptyState.classList.add('d-none');
       if (!grid) {
         grid = document.createElement('div');
-        grid.className = 'row g-4';
+        grid.className = 'row g-3';
         grid.id = 'projects-grid';
         document.querySelector('.app-content').appendChild(grid);
       }
-      const statusMap    = {planning:'info',active:'primary',on_hold:'warning',completed:'success',cancelled:'danger'};
-      const priorityMap  = {low:'success',medium:'info',high:'warning',critical:'danger'};
+      const statusMap   = {planning:'info',active:'primary',on_hold:'warning',completed:'success',cancelled:'danger'};
+      const priorityMap = {low:'success',medium:'info',high:'warning',critical:'danger'};
       const sc = statusMap[p.status] || 'secondary';
       const pc = priorityMap[p.priority] || 'secondary';
       const col = document.createElement('div');
@@ -333,7 +305,8 @@ async function handleCreateProject(e) {
       col.id = 'project-card-' + p.id;
       col.innerHTML = `
         <div class="card h-100 border-0 shadow-sm position-relative overflow-hidden" style="border-radius:16px;background:var(--cs-surface);">
-          <div class="card-body p-4">
+          <div class="position-absolute top-0 start-0 end-0" style="height:4px;background:linear-gradient(90deg,#4f46e5,#7c3aed);"></div>
+          <div class="card-body pt-4">
             <div class="d-flex align-items-start justify-content-between mb-3">
               <span class="badge bg-${sc} bg-opacity-15 text-${sc} fw-semibold">${p.status.replace('_',' ')}</span>
               <span class="badge bg-${pc} bg-opacity-15 text-${pc} fw-semibold">${p.priority}</span>
@@ -365,4 +338,3 @@ function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&
 PGJS;
 include __DIR__ . '/includes/footer.php';
 ?>
-
