@@ -106,4 +106,3 @@ function nav_link(string $href, string $icon, string $label, string $current): s
 
 </aside>
 <!-- ─── /Sidebar ────────────────────────────────────────── -->
-<main class="app-main">

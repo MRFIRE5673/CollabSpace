@@ -148,3 +148,4 @@ $notifs = $notifs->fetchAll();
   </div>
 </nav>
 <!-- ─── /Top Navbar ─────────────────────────────────────── -->
+<main class="app-main">

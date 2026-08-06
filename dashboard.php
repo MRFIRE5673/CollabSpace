@@ -67,8 +67,8 @@ $hr = (int)date('H');
 $greeting = $hr < 12 ? 'Good morning' : ($hr < 17 ? 'Good afternoon' : 'Good evening');
 
 include __DIR__ . '/includes/header.php';
-include __DIR__ . '/includes/navbar.php';
 include __DIR__ . '/includes/sidebar.php';
+include __DIR__ . '/includes/navbar.php';
 ?>
 
 <!-- Main Content -->

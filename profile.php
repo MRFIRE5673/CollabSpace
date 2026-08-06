@@ -85,8 +85,8 @@ $recent_tasks = $db->query("
 
 include __DIR__ . '/includes/header.php';
 ?>
-<?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
+<?php include __DIR__ . '/includes/navbar.php'; ?>
 
 
   <div class="app-content-header py-3 px-4 border-bottom">

@@ -3,6 +3,7 @@
 // Auth & Role-Based Access Control (RBAC) Helper
 // ============================================================
 if (session_status() === PHP_SESSION_NONE) {
+    if (!headers_sent()) ob_start();
     session_start();
 }
 require_once __DIR__ . '/../config/database.php';

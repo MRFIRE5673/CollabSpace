@@ -88,8 +88,8 @@ $prog    = $total_t > 0 ? round(($done_t/$total_t)*100) : $proj['progress'];
 
 include __DIR__ . '/includes/header.php';
 ?>
-<?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
+<?php include __DIR__ . '/includes/navbar.php'; ?>
 
 
   <div class="app-content">

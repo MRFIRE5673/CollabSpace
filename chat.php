@@ -58,8 +58,8 @@ $last_id = empty($messages) ? 0 : max(array_column($messages,'id'));
 
 include __DIR__ . '/includes/header.php';
 ?>
-<?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
+<?php include __DIR__ . '/includes/navbar.php'; ?>
 
 
   <div class="app-content" style="padding:16px!important;">
