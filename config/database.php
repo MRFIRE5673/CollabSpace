@@ -4,8 +4,18 @@
 // Supports: Railway, PlanetScale, Cloud Run, Docker & Local Dev
 // ============================================================
 
-// Support Railway MYSQL_URL format if available (mysql://user:pass@host:port/dbname)
-$mysql_url = getenv('MYSQL_URL') ?: (getenv('MYSQLURL') ?: '');
+// Helper to filter out copy-paste instructions or placeholder strings
+function sanitize_env(?string $val): ?string {
+    if (!$val) return null;
+    $trimmed = trim($val);
+    if (str_contains($trimmed, '(') || str_contains($trimmed, 'copy from') || str_contains($trimmed, 'your_')) {
+        return null; // Invalid placeholder value
+    }
+    return $trimmed;
+}
+
+// Support Railway MYSQL_URL format if available
+$mysql_url = sanitize_env(getenv('MYSQL_URL')) ?: sanitize_env(getenv('MYSQLURL'));
 
 if ($mysql_url) {
     $db_parts = parse_url($mysql_url);
@@ -15,11 +25,11 @@ if ($mysql_url) {
     $env_pass = $db_parts['pass'] ?? '';
     $env_name = ltrim($db_parts['path'] ?? 'collab_workspace', '/');
 } else {
-    $env_host = getenv('DB_HOST') ?: (getenv('MYSQLHOST') ?: 'localhost');
-    $env_port = getenv('DB_PORT') ?: (getenv('MYSQLPORT') ?: '3306');
-    $env_name = getenv('DB_NAME') ?: (getenv('MYSQLDATABASE') ?: 'collab_workspace');
-    $env_user = getenv('DB_USER') ?: (getenv('MYSQLUSER') ?: 'root');
-    $env_pass = getenv('DB_PASS') ?: (getenv('MYSQLPASSWORD') ?: '5673');
+    $env_host = sanitize_env(getenv('DB_HOST')) ?: (sanitize_env(getenv('MYSQLHOST')) ?: 'localhost');
+    $env_port = sanitize_env(getenv('DB_PORT')) ?: (sanitize_env(getenv('MYSQLPORT')) ?: '3306');
+    $env_name = sanitize_env(getenv('DB_NAME')) ?: (sanitize_env(getenv('MYSQLDATABASE')) ?: 'collab_workspace');
+    $env_user = sanitize_env(getenv('DB_USER')) ?: (sanitize_env(getenv('MYSQLUSER')) ?: 'root');
+    $env_pass = sanitize_env(getenv('DB_PASS')) ?: (sanitize_env(getenv('MYSQLPASSWORD')) ?: '5673');
 }
 
 define('DB_HOST',    $env_host);
@@ -41,6 +51,16 @@ define('ALLOWED_EXTENSIONS', ['jpg','jpeg','png','gif','pdf','doc','docx','xls',
 
 // ── PDO singleton ─────────────────────────────────────────────
 $pdo = null;
+
+function render_db_exception(string $error_msg): void {
+    if (php_sapi_name() === 'cli') {
+        throw new PDOException($error_msg);
+    }
+    http_response_code(503);
+    $db_error_message = $error_msg;
+    include __DIR__ . '/db_error.php';
+    exit;
+}
 
 function getDB(): PDO {
     global $pdo;
@@ -69,11 +89,10 @@ function getDB(): PDO {
                 $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
                 return $pdo;
             } catch (PDOException $e2) {
-                throw new PDOException("Database connection failed: " . $e2->getMessage());
+                render_db_exception("Database connection failed: " . $e2->getMessage());
             }
         }
-        // Throw exception so calling pages can catch or handle gracefully
-        throw new PDOException("Database connection failed: " . $e->getMessage());
+        render_db_exception("Database connection failed: " . $e->getMessage());
     }
 
     return $pdo;
