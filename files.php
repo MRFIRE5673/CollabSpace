@@ -26,6 +26,10 @@ $search         = trim($_GET['q'] ?? '');
 
 $where  = '1=1';
 $params = [];
+if (!is_admin()) {
+    $where .= ' AND (f.uploaded_by=? OR f.project_id IN (SELECT id FROM projects WHERE manager_id=? OR created_by=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?)))';
+    $params[] = $uid; $params[] = $uid; $params[] = $uid; $params[] = $uid;
+}
 if ($project_filter) { $where .= ' AND f.project_id=?'; $params[] = $project_filter; }
 if ($search) { $where .= ' AND f.original_name LIKE ?'; $params[] = "%$search%"; }
 if ($type_filter) {
@@ -75,7 +79,7 @@ include __DIR__ . '/includes/header.php';
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 
-<main class="app-main">
+
   <div class="app-content-header py-3 px-4 border-bottom">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <div>

@@ -49,7 +49,7 @@ include __DIR__ . '/includes/header.php';
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 
-<main class="app-main">
+
   <div class="app-content-header py-3 px-4 border-bottom">
     <div class="d-flex align-items-center justify-content-between">
       <div>

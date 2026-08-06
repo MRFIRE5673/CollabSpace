@@ -72,7 +72,7 @@ include __DIR__ . '/includes/sidebar.php';
 ?>
 
 <!-- Main Content -->
-<main class="app-main">
+
   <div class="app-content">
 
     <!-- ── Hero Banner ──────────────────────────────────── -->

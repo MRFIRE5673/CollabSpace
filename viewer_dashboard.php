@@ -47,7 +47,7 @@ require_once __DIR__ . '/includes/navbar.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
-<main class="app-main">
+
   <div class="app-content-header">
     <div class="container-fluid">
       <div class="row align-items-center">

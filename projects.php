@@ -48,11 +48,12 @@ $search   = trim($_GET['q'] ?? '');
 $filter_s = $_GET['status'] ?? '';
 $filter_p = $_GET['priority'] ?? '';
 
-$where  = '1=1';
-$params = [];
-if ($search)   { $where .= " AND p.name LIKE ?";   $params[] = "%$search%"; }
-if ($filter_s) { $where .= " AND p.status=?";       $params[] = $filter_s; }
-if ($filter_p) { $where .= " AND p.priority=?";     $params[] = $filter_p; }
+if (!is_admin()) {
+    $where .= " AND (p.created_by = ? OR p.manager_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?))";
+    $params[] = $uid;
+    $params[] = $uid;
+    $params[] = $uid;
+}
 
 $stmt = $db->prepare("
     SELECT p.*, u.name AS manager_name,
@@ -81,7 +82,7 @@ include __DIR__ . '/includes/header.php';
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 
-<main class="app-main">
+
   <div class="app-content-header py-3 px-4 border-bottom">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <div>

@@ -8,12 +8,13 @@ $uid  = $user['id'];
 $db   = getDB();
 
 // Fetch projects as chat rooms
-$projects = $db->query("
-    SELECT p.id, p.name
-    FROM projects p
-    JOIN project_members pm ON pm.project_id=p.id AND pm.user_id=$uid
-    ORDER BY p.name
-")->fetchAll();
+if (is_admin()) {
+    $projects = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
+} else {
+    $stmt = $db->prepare("SELECT id, name FROM projects WHERE created_by=? OR manager_id=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?) ORDER BY name");
+    $stmt->execute([$uid, $uid, $uid]);
+    $projects = $stmt->fetchAll();
+}
 
 // Direct message users
 $dm_users = $db->query("SELECT id, name, status FROM users WHERE id != $uid AND is_active=1 ORDER BY name")->fetchAll();
@@ -60,7 +61,7 @@ include __DIR__ . '/includes/header.php';
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 
-<main class="app-main">
+
   <div class="app-content" style="padding:16px!important;">
     <div class="chat-wrapper">
 

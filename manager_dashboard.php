@@ -23,14 +23,26 @@ $total_members   = (int)$db->query("SELECT COUNT(*) FROM users WHERE is_active=1
 $completion_pct  = $total_tasks > 0 ? round(($done_tasks / $total_tasks) * 100) : 0;
 $online_count    = (int)$db->query("SELECT COUNT(*) FROM users WHERE status='online' AND is_active=1")->fetchColumn();
 
-// All projects with manager info
-$projects = $db->query("
-    SELECT p.*, u.name AS manager_name,
-           (SELECT COUNT(*) FROM tasks WHERE project_id=p.id AND status='done') AS done_count,
-           (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count
-    FROM projects p JOIN users u ON u.id=p.manager_id
-    ORDER BY p.created_at DESC LIMIT 8
-")->fetchAll();
+if (is_admin()) {
+    $projects = $db->query("
+        SELECT p.*, u.name AS manager_name,
+               (SELECT COUNT(*) FROM tasks WHERE project_id=p.id AND status='done') AS done_count,
+               (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count
+        FROM projects p JOIN users u ON u.id=p.manager_id
+        ORDER BY p.created_at DESC LIMIT 8
+    ")->fetchAll();
+} else {
+    $stmt = $db->prepare("
+        SELECT p.*, u.name AS manager_name,
+               (SELECT COUNT(*) FROM tasks WHERE project_id=p.id AND status='done') AS done_count,
+               (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count
+        FROM projects p JOIN users u ON u.id=p.manager_id
+        WHERE p.created_by = ? OR p.manager_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)
+        ORDER BY p.created_at DESC LIMIT 8
+    ");
+    $stmt->execute([$uid, $uid, $uid]);
+    $projects = $stmt->fetchAll();
+}
 
 // Team members and their task load
 $team = $db->query("
@@ -57,7 +69,7 @@ require_once __DIR__ . '/includes/navbar.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
-<main class="app-main">
+
   <div class="app-content">
 
     <!-- ── Hero Banner ──────────────────────────────────── -->

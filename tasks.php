@@ -12,15 +12,16 @@ $filter_priority = $_GET['priority'] ?? '';
 $filter_assignee = (int)($_GET['assignee'] ?? 0);
 
 // Fetch projects for filter
-$projects_list = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
+if (!is_admin()) {
+    $projects_list = $db->prepare("SELECT id, name FROM projects WHERE created_by=? OR manager_id=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?) ORDER BY name");
+    $projects_list->execute([$uid, $uid, $uid]);
+    $projects_list = $projects_list->fetchAll();
 
-// Build query
-$where  = '1=1';
-$params = [];
-if ($project_id) { $where .= ' AND t.project_id=?'; $params[] = $project_id; }
-if ($filter_priority) { $where .= ' AND t.priority=?'; $params[] = $filter_priority; }
-if ($filter_assignee) { $where .= ' AND t.assigned_to=?'; $params[] = $filter_assignee; }
-if (!is_manager()) { $where .= ' AND (t.assigned_to=? OR t.created_by=?)'; $params[] = $uid; $params[] = $uid; }
+    $where .= ' AND (t.assigned_to=? OR t.created_by=? OR t.project_id IN (SELECT id FROM projects WHERE manager_id=? OR created_by=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?)))';
+    $params[] = $uid; $params[] = $uid; $params[] = $uid; $params[] = $uid; $params[] = $uid;
+} else {
+    $projects_list = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
+}
 
 $stmt = $db->prepare("
     SELECT t.*, u.name AS assignee_name, p.name AS project_name
@@ -46,7 +47,7 @@ include __DIR__ . '/includes/header.php';
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 
-<main class="app-main">
+
   <div class="app-content-header py-3 px-4 border-bottom">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <div>

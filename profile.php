@@ -88,7 +88,7 @@ include __DIR__ . '/includes/header.php';
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 
-<main class="app-main">
+
   <div class="app-content-header py-3 px-4 border-bottom">
     <h2 class="fw-bold mb-0 fs-5"><i class="bi bi-person-circle me-2 text-primary"></i>My Profile</h2>
   </div>

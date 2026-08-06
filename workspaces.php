@@ -28,22 +28,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && is_admin()) {
     exit;
 }
 
-// Fetch workspaces
-$workspaces = $db->query("
-    SELECT w.*,
-           u.name AS creator_name,
-           (SELECT COUNT(*) FROM workspace_members WHERE workspace_id=w.id) AS member_count,
-           (SELECT COUNT(*) FROM projects WHERE workspace_id=w.id) AS project_count
-    FROM workspaces w JOIN users u ON u.id=w.created_by
-    ORDER BY w.created_at DESC
-")->fetchAll();
+if (is_admin()) {
+    $workspaces = $db->query("
+        SELECT w.*,
+               u.name AS creator_name,
+               (SELECT COUNT(*) FROM workspace_members WHERE workspace_id=w.id) AS member_count,
+               (SELECT COUNT(*) FROM projects WHERE workspace_id=w.id) AS project_count
+        FROM workspaces w JOIN users u ON u.id=w.created_by
+        ORDER BY w.created_at DESC
+    ")->fetchAll();
+} else {
+    $stmt = $db->prepare("
+        SELECT w.*,
+               u.name AS creator_name,
+               (SELECT COUNT(*) FROM workspace_members WHERE workspace_id=w.id) AS member_count,
+               (SELECT COUNT(*) FROM projects WHERE workspace_id=w.id) AS project_count
+        FROM workspaces w JOIN users u ON u.id=w.created_by
+        WHERE w.created_by = ? OR w.id IN (SELECT workspace_id FROM workspace_members WHERE user_id = ?)
+        ORDER BY w.created_at DESC
+    ");
+    $stmt->execute([$uid, $uid]);
+    $workspaces = $stmt->fetchAll();
+}
 
 include __DIR__ . '/includes/header.php';
 ?>
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 
-<main class="app-main">
+
   <div class="app-content-header py-3 px-4 border-bottom">
     <div class="d-flex align-items-center justify-content-between">
       <div>

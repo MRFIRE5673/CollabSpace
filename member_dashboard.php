@@ -39,10 +39,10 @@ $stmt2 = $db->prepare("
            (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count
     FROM projects p
     JOIN users u ON u.id = p.manager_id
-    JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = ?
+    WHERE p.created_by = ? OR p.manager_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)
     ORDER BY p.created_at DESC LIMIT 6
 ");
-$stmt2->execute([$uid]);
+$stmt2->execute([$uid, $uid, $uid]);
 $my_projects = $stmt2->fetchAll();
 
 // Recent activity for my projects
@@ -61,7 +61,7 @@ require_once __DIR__ . '/includes/navbar.php';
 require_once __DIR__ . '/includes/sidebar.php';
 ?>
 
-<main class="app-main">
+
   <div class="app-content">
 
     <!-- ── Hero Banner ──────────────────────────────────── -->
