@@ -7,9 +7,11 @@ RUN apk add --no-cache nginx gettext curl zip unzip libzip-dev dos2unix netcat-o
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql zip
 
-# PHP production settings
+# PHP production settings & FPM pool tuning
 RUN printf "upload_max_filesize = 20M\npost_max_size = 22M\nmax_execution_time = 60\nmemory_limit = 128M\n" \
-    > /usr/local/etc/php/conf.d/app.ini
+    > /usr/local/etc/php/conf.d/app.ini \
+ && printf "[www]\npm = dynamic\npm.max_children = 20\npm.start_servers = 4\npm.min_spare_servers = 2\npm.max_spare_servers = 6\npm.max_requests = 500\n" \
+    > /usr/local/etc/php-fpm.d/zz-docker.conf
 
 # Nginx + startup config
 COPY docker/nginx.conf /etc/nginx/nginx.conf.template
