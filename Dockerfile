@@ -31,7 +31,9 @@ RUN mkdir -p /var/www/html/uploads \
 
 # ── Startup script ────────────────────────────────────────────
 COPY docker/start.sh /start.sh
-RUN chmod +x /start.sh
+RUN apk add --no-cache dos2unix \
+ && dos2unix /start.sh \
+ && chmod +x /start.sh
 
 EXPOSE 80
 
