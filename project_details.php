@@ -99,7 +99,7 @@ include __DIR__ . '/includes/header.php';
       <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
         <div>
           <div class="d-flex align-items-center gap-2 mb-2">
-            <a href="projects.php" class="btn btn-sm btn-light btn-light bg-white bg-opacity-20 text-white border-0" id="back-to-projects">
+            <a href="projects.php" class="btn btn-sm btn-outline-light rounded-pill px-3" id="back-to-projects">
               <i class="bi bi-arrow-left me-1"></i>Projects
             </a>
             <?= status_badge($proj['status']) ?>
@@ -315,18 +315,25 @@ include __DIR__ . '/includes/header.php';
         [$ficon,$fcol] = $file_icons[$ext] ?? ['bi-file-earmark-fill','secondary'];
         $fsize = $f['file_size'] > 1048576 ? round($f['file_size']/1048576,1).'MB' : round($f['file_size']/1024,1).'KB';
       ?>
-      <div class="col-sm-6 col-md-4 col-lg-3">
-        <div class="card file-card text-center h-100">
+      <div class="col-sm-6 col-md-4 col-lg-3" id="file-card-<?= $f['id'] ?>">
+        <div class="card file-card text-center h-100 position-relative">
           <div class="card-body py-4">
             <div class="file-icon-wrap bg-<?= $fcol ?> bg-opacity-10 text-<?= $fcol ?> mx-auto">
               <i class="bi <?= $ficon ?>"></i>
             </div>
-            <div class="fw-semibold small text-truncate mb-1"><?= htmlspecialchars($f['original_name']) ?></div>
-            <div class="x-small text-muted mb-3"><?= $fsize ?> · <?= time_ago($f['uploaded_at']) ?></div>
+            <div class="fw-semibold small text-truncate mb-1" title="<?= htmlspecialchars($f['original_name']) ?>"><?= htmlspecialchars($f['original_name']) ?></div>
+            <div class="x-small text-muted mb-1"><?= $fsize ?> · <?= time_ago($f['uploaded_at']) ?></div>
             <div class="x-small text-muted mb-3">by <?= htmlspecialchars($f['uploader_name']) ?></div>
-            <a href="uploads/<?= htmlspecialchars($f['file_path']) ?>" download="<?= htmlspecialchars($f['original_name']) ?>" class="btn btn-sm btn-outline-primary stretched-link" id="dl-file-<?= $f['id'] ?>">
-              <i class="bi bi-download me-1"></i>Download
-            </a>
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <a href="raw_file.php?file=<?= htmlspecialchars($f['file_path']) ?>" download="<?= htmlspecialchars($f['original_name']) ?>" class="btn btn-sm btn-outline-primary py-1 px-3" id="dl-file-<?= $f['id'] ?>">
+                <i class="bi bi-download me-1"></i>Download
+              </a>
+              <?php if (is_admin() || $f['uploaded_by'] == $uid): ?>
+              <button class="btn btn-sm btn-outline-danger py-1 px-2" onclick="deleteProjectFile(<?= $f['id'] ?>)" title="Delete File">
+                <i class="bi bi-trash"></i>
+              </button>
+              <?php endif; ?>
+            </div>
           </div>
         </div>
       </div>
@@ -593,6 +600,24 @@ if (uploadForm) {
         else showToast(res.message || 'Upload failed.', 'danger');
       }).catch(() => showToast('Network error.', 'danger'));
   });
+}
+
+// Single-click AJAX File Delete
+function deleteProjectFile(id) {
+  if (!confirm('Are you sure you want to delete this file?')) return;
+  const fd = new FormData();
+  fd.append('file_id', id);
+  fetch('api/files.php?action=delete', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        const card = document.getElementById('file-card-' + id);
+        if (card) card.remove();
+        showToast('File deleted.', 'success');
+      } else {
+        showToast(res.message || 'Failed to delete file.', 'danger');
+      }
+    }).catch(() => showToast('Network error.', 'danger'));
 }
 
 // Add member submit
