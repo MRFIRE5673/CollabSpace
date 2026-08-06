@@ -2,7 +2,7 @@
 FROM php:8.2-fpm-alpine
 
 # Install nginx + gettext (envsubst) + tools
-RUN apk add --no-cache nginx gettext curl zip unzip libzip-dev dos2unix
+RUN apk add --no-cache nginx gettext curl zip unzip libzip-dev dos2unix netcat-openbsd
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql zip
