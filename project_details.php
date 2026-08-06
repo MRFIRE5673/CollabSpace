@@ -95,7 +95,7 @@ include __DIR__ . '/includes/header.php';
   <div class="app-content">
 
     <!-- Page Hero -->
-    <div class="page-hero mb-4">
+    <div class="page-hero hero-project mb-4">
       <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
         <div>
           <div class="d-flex align-items-center gap-2 mb-2">
@@ -259,11 +259,12 @@ include __DIR__ . '/includes/header.php';
                 <div class="chat-text"><?= nl2br(htmlspecialchars($m['message'])) ?></div>
                 <?php endif; ?>
                 <?php if ($m['file_path']): ?>
-                <div class="chat-attachment d-flex align-items-center gap-2 mt-1">
-                  <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" download="<?= htmlspecialchars($m['file_name'] ?? $m['file_path']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+                <?php $isMine = ($m['sender_id'] == $uid); ?>
+                <div class="chat-attachment d-flex align-items-center gap-2 mt-2 p-2 rounded-3" style="<?= $isMine ? 'background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.25);' : 'background:var(--cs-bg);border:1px solid var(--cs-border);' ?>">
+                  <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" download="<?= htmlspecialchars($m['file_name'] ?? $m['file_path']) ?>" class="btn btn-sm <?= $isMine ? 'btn-light text-primary fw-semibold' : 'btn-primary' ?> py-1 px-2" style="font-size:.78rem;">
                     <i class="bi bi-download me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'Download') ?>
                   </a>
-                  <a href="view_file.php?file=<?= urlencode($m['file_path']) ?>" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
+                  <a href="view_file.php?file=<?= urlencode($m['file_path']) ?>" class="btn btn-sm <?= $isMine ? 'btn-outline-light' : 'btn-outline-secondary' ?> py-1 px-2" style="font-size:.78rem;">
                     <i class="bi bi-eye me-1"></i>View
                   </a>
                 </div>

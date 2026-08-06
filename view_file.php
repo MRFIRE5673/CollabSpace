@@ -345,16 +345,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','html','css','js','php','
   <?php elseif (in_array($ext, ['jpg','jpeg','png','gif','webp','svg','bmp','ico'])): ?>
     <!-- ── Image Viewer ── -->
     <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 overflow-auto bg-dark">
-      <img src="<?= $raw_stream_src ?>" alt="<?= htmlspecialchars($original_name) ?>" class="img-fluid rounded-3 shadow-lg" style="max-height: 80vh; object-fit: contain;"
-           onerror="this.style.display='none'; document.getElementById('img-error-fallback').classList.remove('d-none');">
-      <div id="img-error-fallback" class="d-none text-center p-5 rounded-4 shadow-lg text-white" style="max-width:480px;background:rgba(30,41,59,0.9);backdrop-filter:blur(10px);">
-        <i class="bi bi-file-earmark-image fs-1 text-warning d-block mb-3"></i>
-        <h5 class="fw-bold mb-2"><?= htmlspecialchars($original_name) ?></h5>
-        <p class="small opacity-75 mb-4">The image binary file is not stored on server disk storage.</p>
-        <a href="<?= $raw_stream_src ?>" download="<?= htmlspecialchars($original_name) ?>" class="btn btn-sm btn-primary rounded-pill px-4">
-          <i class="bi bi-download me-1"></i> Try Direct Stream
-        </a>
-      </div>
+      <img src="<?= $raw_stream_src ?>" alt="<?= htmlspecialchars($original_name) ?>" class="img-fluid rounded-3 shadow-lg" style="max-height: 80vh; object-fit: contain;">
     </div>
 
   <?php elseif (in_array($ext, ['doc','ppt','pptx'])): ?>

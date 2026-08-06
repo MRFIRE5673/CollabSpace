@@ -388,9 +388,10 @@ body.sidebar-collapsed .app-main {
 }
 
 /* Hero variants */
-.hero-admin   { background: linear-gradient(135deg, #4338ca 0%, #7c3aed 60%, #5c49e0 100%); }
-.hero-manager { background: linear-gradient(135deg, #065f46 0%, #059669 60%, #06b6d4 100%); }
-.hero-member  { background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 60%, #38bdf8 100%); }
+.hero-admin   { background: linear-gradient(135deg, #4338ca 0%, #7c3aed 60%, #5c49e0 100%); color: #fff !important; }
+.hero-manager { background: linear-gradient(135deg, #065f46 0%, #059669 60%, #06b6d4 100%); color: #fff !important; }
+.hero-member  { background: linear-gradient(135deg, #0369a1 0%, #0ea5e9 60%, #38bdf8 100%); color: #fff !important; }
+.hero-project { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #6366f1 100%); color: #fff !important; }
 
 .hero-eyebrow {
   font-size: .7rem;
