@@ -61,7 +61,6 @@ include __DIR__ . '/includes/header.php';
 <?php include __DIR__ . '/includes/sidebar.php'; ?>
 <?php include __DIR__ . '/includes/navbar.php'; ?>
 
-
   <div class="app-content" style="padding:16px!important;">
     <div class="chat-wrapper">
 
@@ -243,10 +242,149 @@ include __DIR__ . '/includes/header.php';
 <?php
 $page_scripts = <<<JS
 <script>
+let lastMsgId = {$last_id};
+const roomType = "{$room_type}";
+const roomId = {$room_id};
+const chatContainer = document.getElementById('chat-messages-container');
+
+function scrollToBottom() {
+  if (chatContainer) {
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+}
+
+scrollToBottom();
+
+async function sendChatMessage(form) {
+  const input = document.getElementById('chat-msg-input');
+  const msgText = input ? input.value.trim() : '';
+  const fileInput = document.getElementById('chat-file-input');
+  
+  if (!msgText && (!fileInput || !fileInput.files.length)) return false;
+
+  const formData = new FormData(form);
+  formData.append('room_type', roomType);
+  if (roomType === 'direct') {
+    formData.append('receiver_id', roomId);
+  } else {
+    formData.append('project_id', roomId);
+  }
+
+  if (input) input.value = '';
+  const preview = document.getElementById('chat-file-preview');
+  if (preview) preview.textContent = '';
+
+  const emptyState = document.getElementById('chat-empty-state');
+  if (emptyState) emptyState.remove();
+
+  try {
+    const res = await fetch('api/chat.php?action=send', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    
+    if (data.success && data.message) {
+      appendMessageUI(data.message);
+      if (data.id && data.id > lastMsgId) {
+        lastMsgId = data.id;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to send message:', err);
+  }
+
+  if (fileInput) fileInput.value = '';
+  return false;
+}
+
+function appendMessageUI(m) {
+  const isMine = m.is_mine;
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + (isMine ? 'mine' : '');
+  div.id = 'msg-' + m.id;
+  
+  let fileHtml = '';
+  if (m.file_path) {
+    fileHtml = `<a href="uploads/\${m.file_path}" class="chat-attachment" target="_blank">
+      <i class="bi bi-paperclip me-1"></i>\${m.file_name || 'File'}
+    </a>`;
+  }
+  
+  div.innerHTML = `
+    <div class="chat-avatar">\${(m.sender_name || 'U').substring(0,2).toUpperCase()}</div>
+    <div class="chat-bubble">
+      <div class="chat-meta">
+        <span class="fw-semibold me-2">\${escapeHtml(m.sender_name || 'User')}</span>
+        <span>\${m.time_ago || 'just now'}</span>
+      </div>
+      \${m.message ? `<div class="chat-text">\${escapeHtml(m.message).replace(/\\n/g, '<br>')}</div>` : ''}
+      \${fileHtml}
+    </div>
+  `;
+  
+  if (chatContainer) {
+    chatContainer.appendChild(div);
+    scrollToBottom();
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function pollNewMessages() {
+  if (!roomId) return;
+  try {
+    let url = `api/chat.php?action=fetch&after_id=\${lastMsgId}&room_type=\${roomType}`;
+    if (roomType === 'direct') {
+      url += `&receiver_id=\${roomId}`;
+    } else {
+      url += `&project_id=\${roomId}`;
+    }
+    
+    const res = await fetch(url);
+    const messages = await res.json();
+    
+    if (Array.isArray(messages) && messages.length > 0) {
+      const emptyState = document.getElementById('chat-empty-state');
+      if (emptyState) emptyState.remove();
+
+      messages.forEach(m => {
+        if (!document.getElementById('msg-' + m.id)) {
+          appendMessageUI(m);
+          if (m.id > lastMsgId) lastMsgId = m.id;
+        }
+      });
+    }
+  } catch (e) {
+    // Silent catch
+  }
+}
+
+setInterval(pollNewMessages, 1500);
+
 const chatFileInput = document.getElementById('chat-file-input');
-if (chatFileInput) chatFileInput.addEventListener('change', function() {
-  document.getElementById('chat-file-preview').textContent = this.files[0] ? '📎 ' + this.files[0].name : '';
-});
+if (chatFileInput) {
+  chatFileInput.addEventListener('change', function() {
+    document.getElementById('chat-file-preview').textContent = this.files[0] ? '📎 ' + this.files[0].name : '';
+  });
+}
+
+const chatMsgInput = document.getElementById('chat-msg-input');
+if (chatMsgInput) {
+  chatMsgInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      document.getElementById('chat-form').requestSubmit();
+    }
+  });
+}
 </script>
 JS;
 include __DIR__ . '/includes/footer.php';
