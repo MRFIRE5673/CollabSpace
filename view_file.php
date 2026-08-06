@@ -17,6 +17,14 @@ if ($fid) {
     $stmt = $db->prepare("SELECT f.*, u.name AS uploader_name, p.name AS project_name FROM files f JOIN users u ON u.id=f.uploaded_by LEFT JOIN projects p ON p.id=f.project_id WHERE f.id=?");
     $stmt->execute([$fid]);
     $file_rec = $stmt->fetch();
+    if (!$file_rec) {
+        $cstmt = $db->prepare("SELECT c.id AS chat_id, c.file_path AS file_name, c.file_name AS original_name, c.created_at AS uploaded_at, u.name AS uploader_name, p.name AS project_name FROM chats c JOIN users u ON u.id=c.sender_id LEFT JOIN projects p ON p.id=c.project_id WHERE c.id=?");
+        $cstmt->execute([$fid]);
+        $file_rec = $cstmt->fetch();
+        if ($file_rec && empty($file_rec['original_name'])) {
+            $file_rec['original_name'] = $file_rec['file_name'];
+        }
+    }
 }
 
 if (!$file_rec && $fname) {

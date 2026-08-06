@@ -12,6 +12,17 @@ session_write_close();
 $db   = getDB();
 $action = $_GET['action'] ?? 'fetch';
 
+function isProjectMember($db, $userId, $projectId) {
+    if (!$projectId) return false;
+    $stmt = $db->prepare("
+        SELECT 1 FROM projects p
+        LEFT JOIN project_members pm ON pm.project_id = p.id
+        WHERE p.id = ? AND (p.created_by = ? OR p.manager_id = ? OR pm.user_id = ?)
+    ");
+    $stmt->execute([$projectId, $userId, $userId, $userId]);
+    return (bool)$stmt->fetchColumn();
+}
+
 switch ($action) {
     case 'fetch':
         $project_id  = (int)($_GET['project_id'] ?? 0);
@@ -32,6 +43,12 @@ switch ($action) {
             ");
             $stmt->execute([$uid, $uid, $receiver_id, $receiver_id, $uid, $after_id]);
         } else {
+            // Verify user is member of project
+            if ($project_id && !isProjectMember($db, $uid, $project_id)) {
+                echo json_encode([]);
+                exit;
+            }
+
             $stmt = $db->prepare("
                 SELECT c.*, u.name AS sender_name, u.avatar AS sender_avatar,
                        (c.sender_id = ?) AS is_mine
@@ -56,6 +73,13 @@ switch ($action) {
         $receiver_id = (int)($_POST['receiver_id'] ?? 0) ?: null;
         $message     = trim($_POST['message'] ?? '');
         $file_path   = null; $file_name = null;
+
+        if ($room_type === 'project') {
+            if (!$project_id || !isProjectMember($db, $uid, $project_id)) {
+                echo json_encode(['error' => 'Unauthorized project access.']);
+                exit;
+            }
+        }
 
         // Handle file upload
         if (isset($_FILES['chat_file']) && $_FILES['chat_file']['error'] === UPLOAD_ERR_OK) {

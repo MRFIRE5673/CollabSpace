@@ -7,14 +7,16 @@ $user = current_user();
 $uid  = $user['id'];
 $db   = getDB();
 
-// Fetch user's active project rooms
-if (is_admin()) {
-    $projects = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
-} else {
-    $stmt = $db->prepare("SELECT id, name FROM projects WHERE created_by=? OR manager_id=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?) ORDER BY name");
-    $stmt->execute([$uid, $uid, $uid]);
-    $projects = $stmt->fetchAll();
-}
+// Fetch user's assigned project rooms (only projects the user belongs to)
+$stmt = $db->prepare("
+    SELECT DISTINCT p.id, p.name
+    FROM projects p
+    LEFT JOIN project_members pm ON pm.project_id = p.id
+    WHERE p.created_by = ? OR p.manager_id = ? OR pm.user_id = ?
+    ORDER BY p.name
+");
+$stmt->execute([$uid, $uid, $uid]);
+$projects = $stmt->fetchAll();
 
 // Fetch user's added contacts (Direct Messages)
 $stmt = $db->prepare("

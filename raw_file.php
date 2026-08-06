@@ -56,13 +56,21 @@ if ($fid) {
     $stmt = $db->prepare("SELECT * FROM files WHERE id = ?");
     $stmt->execute([$fid]);
     $file_rec = $stmt->fetch();
+    if (!$file_rec) {
+        $cstmt = $db->prepare("SELECT id, file_path AS file_name, file_name AS original_name FROM chats WHERE id = ?");
+        $cstmt->execute([$fid]);
+        $chat_rec = $cstmt->fetch();
+        if ($chat_rec) {
+            $file_rec = $chat_rec;
+        }
+    }
 } elseif ($fname) {
     $stmt = $db->prepare("SELECT * FROM files WHERE file_name = ?");
     $stmt->execute([$fname]);
     $file_rec = $stmt->fetch();
     if (!$file_rec) {
-        $cstmt = $db->prepare("SELECT id, file_path AS file_name, file_name AS original_name FROM chats WHERE file_path = ?");
-        $cstmt->execute([$fname]);
+        $cstmt = $db->prepare("SELECT id, file_path AS file_name, file_name AS original_name FROM chats WHERE file_path = ? OR file_name = ?");
+        $cstmt->execute([$fname, $fname]);
         $chat_rec = $cstmt->fetch();
         if ($chat_rec) {
             $file_rec = $chat_rec;
@@ -76,18 +84,33 @@ if ($fid) {
 
 if (!$file_rec) {
     http_response_code(404);
-    echo 'File not found.';
+    echo 'File record not found.';
     exit;
 }
 
-$file_path = UPLOAD_DIR . $file_rec['file_name'];
-if (!file_exists($file_path)) {
+// Locate physical file on disk across potential path naming variants
+$file_path = null;
+$possible_names = array_filter([
+    $file_rec['file_name'] ?? null,
+    $file_rec['original_name'] ?? null,
+    $fname ?? null
+]);
+
+foreach ($possible_names as $pname) {
+    $target = UPLOAD_DIR . basename($pname);
+    if (file_exists($target)) {
+        $file_path = $target;
+        break;
+    }
+}
+
+if (!$file_path || !file_exists($file_path)) {
     http_response_code(404);
     echo 'File binary missing.';
     exit;
 }
 
-$ext = strtolower(pathinfo($file_rec['original_name'], PATHINFO_EXTENSION));
+$ext = strtolower(pathinfo($file_rec['original_name'] ?? $file_rec['file_name'], PATHINFO_EXTENSION));
 
 $mime_map = [
     'pdf'        => 'application/pdf',
