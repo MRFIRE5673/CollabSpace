@@ -18,34 +18,54 @@
 <script src="js/kanban.js"></script>
 
 <script>
-// ─── Theme Toggle ────────────────────────────────────────
-(function() {
-  const btn = document.getElementById('theme-toggle');
-  const icon = document.getElementById('theme-icon');
-  const html = document.documentElement;
-  const STORAGE_KEY = 'lte-theme';
+// ─── Theme Toggle (Pill Button) ───────────────────────────
+(function () {
+  const btn      = document.getElementById('theme-toggle');
+  const icon     = document.getElementById('theme-icon');
+  const label    = document.getElementById('theme-label');
+  const html     = document.documentElement;
+  const KEY      = 'lte-theme';
 
   function applyTheme(t) {
     html.setAttribute('data-bs-theme', t);
     html.style.colorScheme = t;
-    localStorage.setItem(STORAGE_KEY, t);
+    try { localStorage.setItem(KEY, t); } catch (_) {}
+
     if (icon) {
       icon.className = t === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
     }
+    if (label) {
+      label.textContent = t === 'dark' ? 'Light' : 'Dark';
+    }
   }
 
+  // Init on load
   const current = html.getAttribute('data-bs-theme') || 'light';
-  if (icon) icon.className = current === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+  applyTheme(current);
 
-  if (btn) btn.addEventListener('click', () => {
-    const next = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-    applyTheme(next);
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const next = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+    });
+  }
+})();
+
+// ─── Animate progress bars on scroll / load ───────────────
+(function () {
+  const bars = document.querySelectorAll('.progress-bar');
+  bars.forEach(bar => {
+    const target = bar.style.width;
+    bar.style.width = '0%';
+    requestAnimationFrame(() => {
+      setTimeout(() => { bar.style.transition = 'width .9s cubic-bezier(.4,0,.2,1)'; bar.style.width = target; }, 80);
+    });
   });
 })();
 
 // ─── Mark Notification as Read ───────────────────────────
 document.querySelectorAll('.notif-item').forEach(el => {
-  el.addEventListener('click', function() {
+  el.addEventListener('click', function () {
     const id = this.dataset.id;
     if (id) fetch('api/notifications.php?action=read&id=' + id);
   });
@@ -53,7 +73,9 @@ document.querySelectorAll('.notif-item').forEach(el => {
 document.querySelector('.mark-all-read')?.addEventListener('click', (e) => {
   e.preventDefault();
   fetch('api/notifications.php?action=read_all').then(() => {
-    document.querySelectorAll('.notif-item').forEach(el => el.classList.remove('bg-primary','bg-opacity-10'));
+    document.querySelectorAll('.notif-item').forEach(el => {
+      el.classList.remove('bg-primary', 'bg-opacity-10');
+    });
     const badge = document.getElementById('notif-count');
     if (badge) badge.classList.add('d-none');
   });

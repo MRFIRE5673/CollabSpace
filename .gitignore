@@ -1,0 +1,36 @@
+# ── Environment / Secrets ─────────────────────────────────────
+.env
+.env.local
+.env.production
+
+# ── Uploads (user files — don't commit) ──────────────────────
+/uploads/*
+!/uploads/.gitkeep
+
+# ── System files ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor / IDE ─────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+/logs/
+
+# ── Composer (if used later) ──────────────────────────────────
+/vendor/
+composer.lock
+
+# ── Node (if used later) ──────────────────────────────────────
+node_modules/
+npm-debug.log*
+
+# ── Build artifacts ───────────────────────────────────────────
+/dist/
+/build/

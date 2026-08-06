@@ -8,25 +8,28 @@ function nav_link(string $href, string $icon, string $label, string $current): s
 }
 ?>
 <!-- ─── Sidebar ─────────────────────────────────────────── -->
-<aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
-  <div class="sidebar-brand d-flex align-items-center gap-2 px-3 py-3">
-    <div class="brand-logo">
-      <div class="rounded-2 d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:linear-gradient(135deg,#4f46e5,#7c3aed);">
-        <i class="bi bi-lightning-charge-fill text-white"></i>
-      </div>
+<aside class="app-sidebar shadow" data-bs-theme="dark">
+
+  <!-- Brand -->
+  <div class="sidebar-brand d-flex align-items-center gap-3">
+    <div class="sidebar-brand-logo">
+      <i class="bi bi-lightning-charge-fill text-white" style="font-size:1.1rem;"></i>
     </div>
-    <span class="brand-text fw-bold fs-5 text-white">CollabSpace</span>
+    <div class="overflow-hidden">
+      <div class="brand-text fw-bold">CollabSpace</div>
+      <div class="brand-tagline">Real-Time Workspace</div>
+    </div>
+    <span class="brand-live-dot ms-auto flex-shrink-0" title="Live"></span>
   </div>
 
   <div class="sidebar-wrapper">
     <nav class="mt-2 sidebar-nav">
       <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu">
 
-        <!-- Main — visible to ALL roles -->
-        <li class="nav-header text-uppercase" style="font-size:.65rem;letter-spacing:.1em;padding: 8px 16px;color:rgba(255,255,255,.45);">Main</li>
+        <!-- Main -->
+        <li class="nav-header">Main</li>
 
         <?php
-        // Each role lands on their own home page
         $home = match($user['role'] ?? 'member') {
             'admin'   => 'dashboard.php',
             'manager' => 'manager_dashboard.php',
@@ -37,43 +40,39 @@ function nav_link(string $href, string $icon, string $label, string $current): s
         echo nav_link($home, 'bi-speedometer2', 'Dashboard', $current_page);
         ?>
 
-        <?php if (is_member()): // member, manager, admin ?>
+        <?php if (is_member()): ?>
         <!-- Workspace -->
-        <li class="nav-header text-uppercase" style="font-size:.65rem;letter-spacing:.1em;padding: 8px 16px;color:rgba(255,255,255,.45);">Workspace</li>
-
-        <?= nav_link('workspaces.php', 'bi-grid-1x2-fill', 'Workspaces', $current_page) ?>
-        <?= nav_link('projects.php',   'bi-kanban-fill',   'Projects',   $current_page) ?>
-        <?= nav_link('tasks.php',      'bi-check2-square', 'Task Board', $current_page) ?>
+        <li class="nav-header">Workspace</li>
+        <?= nav_link('workspaces.php', 'bi-grid-1x2-fill',  'Workspaces', $current_page) ?>
+        <?= nav_link('projects.php',   'bi-kanban-fill',    'Projects',   $current_page) ?>
+        <?= nav_link('tasks.php',      'bi-check2-square',  'Task Board', $current_page) ?>
         <?php endif; ?>
 
-        <?php if (!is_member() && is_viewer()): // pure viewer only ?>
-        <!-- Overview -->
-        <li class="nav-header text-uppercase" style="font-size:.65rem;letter-spacing:.1em;padding: 8px 16px;color:rgba(255,255,255,.45);">Overview</li>
+        <?php if (!is_member() && is_viewer()): ?>
+        <li class="nav-header">Overview</li>
         <?= nav_link('viewer_dashboard.php', 'bi-eye-fill', 'Viewer Portal', $current_page) ?>
         <?php endif; ?>
 
         <?php if (is_member()): ?>
-        <!-- Communication -->
-        <li class="nav-header text-uppercase" style="font-size:.65rem;letter-spacing:.1em;padding: 8px 16px;color:rgba(255,255,255,.45);">Communication</li>
-
+        <!-- Collaborate -->
+        <li class="nav-header">Collaborate</li>
         <li class="nav-item">
           <a href="chat.php" class="nav-link <?= $current_page === 'chat.php' ? 'active' : '' ?>">
             <i class="nav-icon bi bi-chat-dots-fill"></i>
-            <p>Team Chat <span class="badge badge-sm bg-success ms-auto" id="sidebar-chat-badge" style="display:none;"></span></p>
+            <p>Team Chat <span class="badge badge-sm bg-success ms-auto" id="sidebar-chat-badge" style="display:none;font-size:.55rem;"></span></p>
           </a>
         </li>
-        <?= nav_link('files.php', 'bi-folder2-open', 'File Sharing', $current_page) ?>
+        <?= nav_link('files.php',    'bi-folder2-open', 'File Sharing', $current_page) ?>
 
         <!-- Planning -->
-        <li class="nav-header text-uppercase" style="font-size:.65rem;letter-spacing:.1em;padding: 8px 16px;color:rgba(255,255,255,.45);">Planning</li>
-
-        <?= nav_link('calendar.php',  'bi-calendar3', 'Calendar',      $current_page) ?>
-        <?= nav_link('activity.php',  'bi-activity',  'Activity Feed', $current_page) ?>
+        <li class="nav-header">Planning</li>
+        <?= nav_link('calendar.php', 'bi-calendar3', 'Calendar',      $current_page) ?>
+        <?= nav_link('activity.php', 'bi-activity',  'Activity Feed', $current_page) ?>
         <?php endif; ?>
 
         <?php if (is_admin()): ?>
-        <!-- Admin only -->
-        <li class="nav-header text-uppercase" style="font-size:.65rem;letter-spacing:.1em;padding: 8px 16px;color:rgba(255,255,255,.45);">Administration</li>
+        <!-- Administration -->
+        <li class="nav-header">Administration</li>
         <?= nav_link('users.php', 'bi-people-fill', 'User Management', $current_page) ?>
         <?php endif; ?>
 
@@ -81,23 +80,29 @@ function nav_link(string $href, string $icon, string $label, string $current): s
     </nav>
   </div>
 
-  <!-- User Status Footer -->
-  <div class="sidebar-footer px-3 py-2 border-top border-secondary">
+  <!-- Sidebar Footer -->
+  <div class="sidebar-footer">
     <div class="d-flex align-items-center gap-2">
-      <?= get_avatar_html($user, '32px') ?>
-      <div class="overflow-hidden">
-        <div class="small fw-semibold text-white text-truncate"><?= htmlspecialchars($user['name']) ?></div>
-        <div class="d-flex align-items-center gap-1">
-          <span class="online-dot" style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+      <?= get_avatar_html($user, '34px') ?>
+      <div class="overflow-hidden flex-grow-1">
+        <div class="small fw-semibold text-white text-truncate" style="font-size:.8rem;"><?= htmlspecialchars($user['name']) ?></div>
+        <div class="d-flex align-items-center gap-1 mt-1">
+          <span class="online-dot"></span>
           <?php
           $roleBadgeColors = ['admin'=>'danger','manager'=>'success','member'=>'primary','viewer'=>'secondary'];
           $roleColor = $roleBadgeColors[$user['role']] ?? 'secondary';
           ?>
-          <span class="badge bg-<?= $roleColor ?>" style="font-size:.55rem;padding:2px 5px;"><?= ucfirst(htmlspecialchars($user['role'])) ?></span>
+          <span class="badge bg-<?= $roleColor ?>" style="font-size:.52rem;padding:2px 6px;border-radius:4px !important;">
+            <?= ucfirst(htmlspecialchars($user['role'])) ?>
+          </span>
         </div>
       </div>
-      <a href="profile.php" class="ms-auto text-secondary"><i class="bi bi-gear-fill"></i></a>
+      <a href="profile.php" class="text-white opacity-50 hover-opacity-100 flex-shrink-0"
+         style="transition:opacity .2s ease;" title="Settings">
+        <i class="bi bi-gear-fill" style="font-size:.9rem;"></i>
+      </a>
     </div>
   </div>
+
 </aside>
 <!-- ─── /Sidebar ────────────────────────────────────────── -->

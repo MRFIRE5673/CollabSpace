@@ -41,19 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <link rel="stylesheet" href="css/custom.css">
   <style>
     body { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bs-body-bg); }
-    .auth-wrap { width: 100%; max-width: 460px; padding: 24px 16px; }
+    .auth-wrap { width: 100%; max-width: 440px; padding: 24px 16px; }
     .auth-card { border-radius: 20px !important; border: 1px solid rgba(79,70,229,.12) !important; box-shadow: 0 20px 60px rgba(79,70,229,.15) !important; }
     .auth-brand { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 28px; }
     .auth-logo { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg,#4f46e5,#7c3aed); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #fff; }
     .auth-brand-name { font-size: 1.6rem; font-weight: 700; background: linear-gradient(135deg,#4f46e5,#7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .divider { display: flex; align-items: center; gap: 12px; color: var(--bs-secondary-color); font-size: .8rem; margin: 18px 0; }
-    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(0,0,0,.1); }
-    [data-bs-theme="dark"] .divider::before, [data-bs-theme="dark"] .divider::after { background: rgba(255,255,255,.1); }
-    .demo-accounts { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-top: 6px; }
-    .demo-btn { font-size: .7rem; padding: 8px 4px; border-radius: 8px !important; text-align: center; cursor: pointer; transition: transform .15s, box-shadow .15s; }
-    .demo-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
-    .demo-btn.active { transform: scale(.95); }
-    .role-badge { display: inline-block; font-size:.6rem; padding:1px 5px; border-radius:4px; margin-top:2px; }
     @keyframes shake { 0%,100%{transform:none} 20%,60%{transform:translateX(-6px)} 40%,80%{transform:translateX(6px)} }
     .shake { animation: shake .4s ease; }
   </style>
@@ -105,61 +97,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <span id="btn-loading" class="d-none"><span class="spinner-border spinner-border-sm me-2"></span>Signing in...</span>
         </button>
       </form>
-
-      <div class="divider">Quick access — click a role to sign in</div>
-
-      <div class="demo-accounts">
-        <button type="button" class="demo-btn btn btn-outline-danger" onclick="fillDemo('admin@workspace.com','password123','demo-admin')" id="demo-admin">
-          <i class="bi bi-shield-fill-check d-block fs-5 mb-1"></i>
-          Admin
-          <div class="role-badge bg-danger text-white">Full Access</div>
-        </button>
-        <button type="button" class="demo-btn btn btn-outline-success" onclick="fillDemo('pm@workspace.com','password123','demo-manager')" id="demo-manager">
-          <i class="bi bi-diagram-3-fill d-block fs-5 mb-1"></i>
-          Manager
-          <div class="role-badge bg-success text-white">Projects</div>
-        </button>
-        <button type="button" class="demo-btn btn btn-outline-primary" onclick="fillDemo('member@workspace.com','password123','demo-member')" id="demo-member">
-          <i class="bi bi-person-fill d-block fs-5 mb-1"></i>
-          Member
-          <div class="role-badge bg-primary text-white">Tasks</div>
-        </button>
-        <button type="button" class="demo-btn btn btn-outline-secondary" onclick="fillDemo('viewer@workspace.com','password123','demo-viewer')" id="demo-viewer">
-          <i class="bi bi-eye-fill d-block fs-5 mb-1"></i>
-          Viewer
-          <div class="role-badge bg-secondary text-white">Read Only</div>
-        </button>
-      </div>
-
     </div>
   </div>
 
   <p class="text-center text-muted small mt-3">
     Don't have an account? <a href="register.php" class="text-primary text-decoration-none fw-semibold">Create one</a>
   </p>
-  <p class="text-center text-muted" style="font-size:.65rem;line-height:1.8">
-    <strong>Demo password for all accounts:</strong> <code>password123</code><br>
-    <span class="text-danger">admin@workspace.com</span> → Admin Dashboard &nbsp;|
-    <span class="text-success">pm@workspace.com</span> → Manager View<br>
-    <span class="text-primary">member@workspace.com</span> → Member Board &nbsp;|
-    <span class="text-secondary">viewer@workspace.com</span> → Viewer Portal
-  </p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 <script>
-function fillDemo(email, pass, btnId) {
-  document.getElementById('email').value = email;
-  document.getElementById('password').value = pass;
-  // Highlight the active button
-  document.querySelectorAll('.demo-btn').forEach(b => b.classList.remove('active'));
-  if (btnId) document.getElementById(btnId).classList.add('active');
-  // Show loading on submit button
-  document.getElementById('btn-text').classList.add('d-none');
-  document.getElementById('btn-loading').classList.remove('d-none');
-  document.getElementById('login-btn').disabled = true;
-  document.getElementById('login-form').submit();
-}
 document.getElementById('toggle-pw').addEventListener('click', function() {
   const pw = document.getElementById('password');
   const icon = document.getElementById('pw-icon');
@@ -174,3 +121,4 @@ document.getElementById('login-form').addEventListener('submit', function() {
 </script>
 </body>
 </html>
+
