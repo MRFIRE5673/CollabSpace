@@ -1,38 +1,38 @@
-# ── PHP App (Apache) ─────────────────────────────────────────
-FROM php:8.2-apache
+# ── nginx + PHP-FPM (no Apache MPM issues) ───────────────────
+FROM php:8.2-fpm-alpine
 
-# Fix: disable conflicting MPM modules, keep only prefork
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
-    && a2enmod mpm_prefork rewrite headers
+# Install nginx + required tools
+RUN apk add --no-cache nginx curl zip unzip
 
-# Install required PHP extensions
+# Install PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql
 
-# Install zip support (for file uploads)
-RUN apt-get update && apt-get install -y libzip-dev zip unzip \
-    && docker-php-ext-install zip \
-    && rm -rf /var/lib/apt/lists/*
+# Install zip extension
+RUN apk add --no-cache libzip-dev \
+    && docker-php-ext-install zip
 
-# Apache config — allow .htaccess in app directory
-RUN printf '<Directory /var/www/html>\n\
-    Options Indexes FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>\n' > /etc/apache2/conf-available/app.conf \
-    && a2enconf app
+# ── nginx config ─────────────────────────────────────────────
+RUN mkdir -p /run/nginx
+COPY docker/nginx.conf /etc/nginx/nginx.conf
 
-# PHP production settings
-RUN printf "upload_max_filesize = 20M\npost_max_size = 22M\nmax_execution_time = 60\nmemory_limit = 128M\n" \
-    > /usr/local/etc/php/conf.d/app.ini
+# ── PHP-FPM config ────────────────────────────────────────────
+RUN echo "upload_max_filesize = 20M" >> /usr/local/etc/php/conf.d/app.ini \
+ && echo "post_max_size = 22M"       >> /usr/local/etc/php/conf.d/app.ini \
+ && echo "max_execution_time = 60"   >> /usr/local/etc/php/conf.d/app.ini \
+ && echo "memory_limit = 128M"       >> /usr/local/etc/php/conf.d/app.ini
 
-# Copy app files
+# ── App files ─────────────────────────────────────────────────
 COPY . /var/www/html/
 
-# Ensure uploads directory exists with correct permissions
-RUN mkdir -p /var/www/html/uploads && \
-    chmod 755 /var/www/html/uploads && \
-    chown -R www-data:www-data /var/www/html
+# Uploads directory
+RUN mkdir -p /var/www/html/uploads \
+ && chmod 755 /var/www/html/uploads \
+ && chown -R www-data:www-data /var/www/html
+
+# ── Startup script ────────────────────────────────────────────
+COPY docker/start.sh /start.sh
+RUN chmod +x /start.sh
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["/start.sh"]
