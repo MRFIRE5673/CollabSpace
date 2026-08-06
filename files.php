@@ -208,7 +208,8 @@ include __DIR__ . '/includes/header.php';
           <div class="dropdown">
             <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical fs-5"></i></button>
             <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="border-radius:12px;">
-              <li><a class="dropdown-item py-2" href="<?= $fileUrl ?>" target="_blank"><i class="bi bi-download me-2 text-primary"></i>Download</a></li>
+              <li><a class="dropdown-item py-2" href="view_file.php?id=<?= $f['id'] ?>"><i class="bi bi-eye me-2 text-primary"></i>Open in Browser</a></li>
+              <li><a class="dropdown-item py-2" href="<?= $fileUrl ?>" download="<?= htmlspecialchars($f['original_name']) ?>"><i class="bi bi-download me-2 text-success"></i>Download File</a></li>
               <li><button class="dropdown-item py-2" onclick="copyShareLink('<?= $fileUrl ?>')"><i class="bi bi-link-45deg me-2 text-info"></i>Copy Share Link</button></li>
               <?php if (is_admin() || $f['uploaded_by'] == $uid): ?>
               <li><hr class="dropdown-divider"></li>
@@ -218,9 +219,9 @@ include __DIR__ . '/includes/header.php';
           </div>
         </div>
 
-        <div class="fw-bold text-truncate mb-1" title="<?= htmlspecialchars($f['original_name']) ?>">
+        <a href="view_file.php?id=<?= $f['id'] ?>" class="fw-bold text-decoration-none text-body text-truncate mb-1 d-block" title="<?= htmlspecialchars($f['original_name']) ?>">
           <?= htmlspecialchars($f['original_name']) ?>
-        </div>
+        </a>
 
         <div class="x-small text-muted mb-3 d-flex align-items-center justify-content-between">
           <span><?= format_file_size($f['file_size']) ?></span>
@@ -237,13 +238,9 @@ include __DIR__ . '/includes/header.php';
 
         <div class="mt-auto pt-2 border-top d-flex align-items-center justify-content-between x-small text-muted">
           <span>By <?= htmlspecialchars($f['uploader_name']) ?></span>
-          <?php if ($isImage): ?>
-          <button class="btn btn-sm btn-outline-primary py-0 px-2 style-none" style="font-size:.7rem;" onclick="previewImage('<?= $fileUrl ?>', '<?= htmlspecialchars(addslashes($f['original_name'])) ?>')">
-            <i class="bi bi-eye me-1"></i>Preview
-          </button>
-          <?php else: ?>
-          <a href="<?= $fileUrl ?>" target="_blank" class="text-primary text-decoration-none fw-semibold">Open <i class="bi bi-box-arrow-up-right ms-1"></i></a>
-          <?php endif; ?>
+          <a href="view_file.php?id=<?= $f['id'] ?>" class="btn btn-sm btn-outline-primary py-0 px-2 style-none" style="font-size:.7rem;">
+            <i class="bi bi-eye me-1"></i>Open
+          </a>
         </div>
       </div>
     </div>
