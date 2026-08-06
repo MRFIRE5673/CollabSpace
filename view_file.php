@@ -103,6 +103,11 @@ include __DIR__ . '/includes/header.php';
   </div>
 </div>
 
+<?php
+$is_editable = in_array($ext, ['txt','md','json','csv','html','css','js','php','py','sql','xml','log','env','yaml']);
+?>
+
+<?php if ($is_editable): ?>
 <!-- Real-Time Collaboration Status Bar -->
 <div class="bg-body-tertiary border-bottom px-4 py-2 d-flex align-items-center justify-content-between flex-wrap gap-2" style="flex-shrink:0;">
   <div class="d-flex align-items-center gap-2">
@@ -121,9 +126,11 @@ include __DIR__ . '/includes/header.php';
     </button>
   </div>
 </div>
+<?php endif; ?>
 
-<div class="app-content p-0 d-flex flex-column" style="height: calc(100vh - 170px); background: var(--cs-bg);">
+<div class="app-content p-0 d-flex flex-column" style="height: calc(100vh - <?= $is_editable ? '170px' : '128px' ?>); background: var(--cs-bg);">
 
+  <?php if ($is_editable): ?>
   <!-- Real-Time Collaborative Live Editor Container -->
   <div id="collab-editor-container" class="flex-grow-1 p-3 p-md-4 overflow-auto">
     <div class="card border-0 shadow-lg mx-auto" style="max-width:1000px;border-radius:20px;background:var(--cs-surface);">
@@ -148,9 +155,10 @@ include __DIR__ . '/includes/header.php';
       </div>
     </div>
   </div>
+  <?php endif; ?>
 
   <!-- Formatted Reader Container -->
-  <div id="collab-preview-container" class="d-none flex-column flex-grow-1 h-100">
+  <div id="collab-preview-container" class="<?= $is_editable ? 'd-none' : 'd-flex' ?> flex-column flex-grow-1 h-100">
     <?php if (in_array($ext, ['docx', 'doc'])): ?>
     <!-- ── High Performance Word (.docx / .doc) Document Reader ── -->
     <div class="flex-grow-1 p-3 p-md-4 overflow-auto">
@@ -482,7 +490,7 @@ include __DIR__ . '/includes/header.php';
   }
 
   async function pollDocumentSync() {
-    if (isUserTyping) return;
+    if (!liveEditor || isUserTyping) return;
     try {
       const res = await fetch(`api/documents.php?action=poll&file=${encodeURIComponent(fileName)}&client_mtime=${currentClientMtime}`);
       const data = await res.json();

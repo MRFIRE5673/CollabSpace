@@ -15,7 +15,45 @@
 <script src="js/realtime.js?v=<?= time() ?>"></script>
 <script src="js/kanban.js?v=<?= time() ?>"></script>
 
+<!-- Global Toast Notification Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;" id="toast-container"></div>
+
 <script>
+// ─── Global Toast Notification Engine ───────────────────
+window.showToast = function(message, type='info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1090';
+    document.body.appendChild(container);
+  }
+  const id = 'toast-' + Date.now() + Math.floor(Math.random()*1000);
+  const bgClass = type === 'success' ? 'text-bg-success' : (type === 'danger' ? 'text-bg-danger' : (type === 'warning' ? 'text-bg-warning' : 'text-bg-primary'));
+  const icon = type === 'success' ? 'bi-check-circle-fill' : (type === 'danger' ? 'bi-exclamation-triangle-fill' : (type === 'warning' ? 'bi-exclamation-circle-fill' : 'bi-bell-fill'));
+
+  const toastHtml = `
+    <div id="${id}" class="toast align-items-center ${bgClass} border-0 shadow-lg mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="d-flex">
+        <div class="toast-body d-flex align-items-center gap-2 py-2">
+          <i class="bi ${icon} fs-5"></i>
+          <div>${message}</div>
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>`;
+  container.insertAdjacentHTML('beforeend', toastHtml);
+  const toastEl = document.getElementById(id);
+  if (window.bootstrap && bootstrap.Toast) {
+    const bsToast = new bootstrap.Toast(toastEl, { delay: 4500 });
+    bsToast.show();
+  } else {
+    setTimeout(() => toastEl.remove(), 4500);
+  }
+  toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+};
+
 // ─── Sidebar Toggle ───────────────────────────────────────
 document.querySelectorAll('[data-lte-toggle="sidebar"]').forEach(el => {
   el.addEventListener('click', function(e) {
