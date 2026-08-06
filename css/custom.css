@@ -91,14 +91,81 @@ h1, h2, h3, .brand-text, .hero-title {
 ::-webkit-scrollbar-thumb { background: rgba(92,73,224,.25); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(92,73,224,.5); }
 
-/* ─── App Wrapper ────────────────────────────────────────── */
-.app-wrapper { background: var(--cs-bg) !important; }
+/* ─── App Layout Structure ────────────────────────────────── */
+.app-wrapper {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  background: var(--cs-bg) !important;
+}
 
-/* ─── SIDEBAR ────────────────────────────────────────────── */
 .app-sidebar {
+  width: var(--cs-sidebar-w) !important;
+  flex-shrink: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 1040;
+  display: flex;
+  flex-direction: column;
   background: linear-gradient(165deg, #1a1535 0%, #120e2a 60%, #0d0b1f 100%) !important;
   border-right: 1px solid rgba(255,255,255,.05) !important;
-  width: var(--cs-sidebar-w) !important;
+  transition: transform var(--cs-t) var(--cs-ease);
+}
+
+.sidebar-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-menu {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin-bottom: 0 !important;
+}
+.sidebar-menu .nav-item {
+  list-style: none !important;
+}
+
+.app-main {
+  flex: 1;
+  margin-left: var(--cs-sidebar-w);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin-left var(--cs-t) var(--cs-ease);
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+}
+
+/* Sidebar Toggle States */
+body.sidebar-collapsed .app-sidebar {
+  transform: translateX(-100%);
+}
+body.sidebar-collapsed .app-main {
+  margin-left: 0;
+}
+
+@media (max-width: 991.98px) {
+  .app-sidebar {
+    transform: translateX(-100%);
+  }
+  .app-main {
+    margin-left: 0;
+  }
+  body.sidebar-open .app-sidebar {
+    transform: translateX(0);
+    box-shadow: 0 0 40px rgba(0,0,0,0.5) !important;
+  }
 }
 
 /* Sidebar Brand */

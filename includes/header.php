@@ -38,10 +38,10 @@ $user = current_user();
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" crossorigin="anonymous">
 
-  <!-- AdminLTE CSS -->
-  <link rel="stylesheet" href="css/adminlte.css" />
+  <!-- Bootstrap 5 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" crossorigin="anonymous">
 
-  <!-- Custom CSS -->
+  <!-- Custom CSS System -->
   <link rel="stylesheet" href="css/custom.css" />
 </head>
 <body class="layout-fixed sidebar-expand-lg bg-body-tertiary">

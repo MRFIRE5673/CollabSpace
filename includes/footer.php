@@ -9,8 +9,6 @@
 <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es5.min.js" crossorigin="anonymous"></script>
 <!-- Bootstrap Bundle (Popper included) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-<!-- AdminLTE JS -->
-<script src="js/adminlte.min.js"></script>
 <!-- Dragula (drag-and-drop) -->
 <script src="https://cdn.jsdelivr.net/npm/dragula@3.7.3/dist/dragula.min.js" crossorigin="anonymous"></script>
 <!-- Custom JS -->
@@ -18,6 +16,14 @@
 <script src="js/kanban.js"></script>
 
 <script>
+// ─── Sidebar Toggle ───────────────────────────────────────
+document.querySelectorAll('[data-lte-toggle="sidebar"]').forEach(el => {
+  el.addEventListener('click', function(e) {
+    e.preventDefault();
+    document.body.classList.toggle('sidebar-collapsed');
+    document.body.classList.toggle('sidebar-open');
+  });
+});
 // ─── Theme Toggle (Pill Button) ───────────────────────────
 (function () {
   const btn      = document.getElementById('theme-toggle');
