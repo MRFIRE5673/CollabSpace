@@ -105,39 +105,95 @@ include __DIR__ . '/includes/header.php';
 
 <div class="app-content p-0 d-flex flex-column" style="height: calc(100vh - 128px); background: var(--cs-bg);">
 
-  <?php if ($ext === 'docx'): ?>
-    <!-- ── Word (.docx) Renderer (Mammoth.js) ── -->
-    <div class="flex-grow-1 p-4 overflow-auto">
-      <div class="card border-0 shadow-lg mx-auto" style="max-width:900px;border-radius:20px;background:var(--cs-surface);">
+  <?php if (in_array($ext, ['docx', 'doc'])): ?>
+    <!-- ── High Performance Word (.docx / .doc) Document Reader ── -->
+    <div class="flex-grow-1 p-3 p-md-4 overflow-auto">
+      <div class="card border-0 shadow-lg mx-auto" style="max-width:960px;border-radius:20px;background:var(--cs-surface);">
         <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between py-3 px-4" style="border-radius:20px 20px 0 0;">
-          <div class="fw-bold"><i class="bi bi-file-earmark-word-fill text-primary me-2 fs-5"></i>Word Document Reader</div>
-          <span class="badge bg-success bg-opacity-15 text-success"><i class="bi bi-check-circle-fill me-1"></i>In-Browser Reader</span>
+          <div class="fw-bold d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-word-fill text-primary fs-5"></i>
+            <span>Word Document Reader</span>
+          </div>
+          <div class="btn-group btn-group-sm" id="docx-engine-tabs">
+            <button class="btn btn-outline-primary active" onclick="switchDocEngine('mammoth')">Native Reader</button>
+            <button class="btn btn-outline-primary" onclick="switchDocEngine('office')">Office Online</button>
+            <button class="btn btn-outline-primary" onclick="switchDocEngine('google')">Google Viewer</button>
+          </div>
         </div>
-        <div class="card-body p-4 p-md-5">
-          <div id="docx-output" class="document-render-area">
-            <div class="text-center py-5 text-muted">
-              <div class="spinner-border text-primary spinner-border-sm mb-2"></div>
-              <div>Rendering Word Document...</div>
+        <div class="card-body p-0">
+          <div id="docx-mammoth-view" class="p-4 p-md-5">
+            <div id="docx-output" class="document-render-area">
+              <div class="text-center py-5 text-muted">
+                <div class="spinner-border text-primary spinner-border-sm mb-2"></div>
+                <div>Rendering Word Document...</div>
+              </div>
             </div>
+          </div>
+          <div id="docx-iframe-view" class="d-none" style="height:700px;">
+            <iframe id="docx-frame" src="" class="w-100 h-100 border-0"></iframe>
           </div>
         </div>
       </div>
     </div>
 
     <script>
+      function switchDocEngine(engine) {
+        const mammothView = document.getElementById('docx-mammoth-view');
+        const iframeView  = document.getElementById('docx-iframe-view');
+        const frame       = document.getElementById('docx-frame');
+        document.querySelectorAll('#docx-engine-tabs .btn').forEach(b => b.classList.remove('active'));
+
+        if (engine === 'mammoth') {
+          mammothView.classList.remove('d-none');
+          iframeView.classList.add('d-none');
+          event.target.classList.add('active');
+        } else if (engine === 'office') {
+          mammothView.classList.add('d-none');
+          iframeView.classList.remove('d-none');
+          frame.src = 'https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>';
+          event.target.classList.add('active');
+        } else if (engine === 'google') {
+          mammothView.classList.add('d-none');
+          iframeView.classList.remove('d-none');
+          frame.src = 'https://docs.google.com/viewer?url=<?= urlencode($raw_file_url) ?>&embedded=true';
+          event.target.classList.add('active');
+        }
+      }
+
       fetch('<?= $raw_stream_src ?>')
         .then(r => r.arrayBuffer())
-        .then(arrayBuffer => mammoth.convertToHtml({ arrayBuffer: arrayBuffer }))
+        .then(arrayBuffer => {
+          if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            document.getElementById('docx-output').innerHTML = `
+              <div class="text-center py-5 text-muted">
+                <i class="bi bi-file-earmark-word fs-1 opacity-25 d-block mb-2"></i>
+                <h6 class="fw-bold mb-1">Empty Document</h6>
+                <p class="small text-muted mb-3">This Word file has 0 bytes of content.</p>
+                <a href="<?= $raw_stream_src ?>" download="<?= htmlspecialchars($original_name) ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                  <i class="bi bi-download me-1"></i>Download File
+                </a>
+              </div>`;
+            return;
+          }
+          return mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+        })
         .then(result => {
-          document.getElementById('docx-output').innerHTML = result.value || '<div class="text-muted text-center py-4">Document contains no text or formatted content.</div>';
+          if (!result) return;
+          if (result.value && result.value.trim().length > 0) {
+            document.getElementById('docx-output').innerHTML = result.value;
+          } else {
+            // If empty text, automatically switch to Office iframe
+            document.getElementById('docx-mammoth-view').classList.add('d-none');
+            document.getElementById('docx-iframe-view').classList.remove('d-none');
+            document.getElementById('docx-frame').src = 'https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>';
+          }
         })
         .catch(err => {
-          console.error(err);
-          document.getElementById('docx-output').innerHTML = `
-            <div class="alert alert-warning text-center">
-              <i class="bi bi-exclamation-triangle-fill fs-3 d-block mb-2"></i>
-              Direct rendering failed. <a href="<?= $raw_stream_src ?>" class="btn btn-sm btn-primary mt-2">Download Word File</a>
-            </div>`;
+          console.warn('Mammoth render fallback:', err);
+          // Auto fallback to Office Online iframe on parse error
+          document.getElementById('docx-mammoth-view').classList.add('d-none');
+          document.getElementById('docx-iframe-view').classList.remove('d-none');
+          document.getElementById('docx-frame').src = 'https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>';
         });
     </script>
 
