@@ -13,6 +13,7 @@ if (!is_logged_in()) {
 
 $user   = current_user();
 $uid    = $user['id'];
+session_write_close();
 $db     = getDB();
 $action = $_GET['action'] ?? ($_POST['action'] ?? 'list');
 

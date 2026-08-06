@@ -1,6 +1,9 @@
 <?php
-// ─── Shared Page Header ──────────────────────────────────
+// ─── Shared Page Header (High Speed Optimized) ───────────
 if (session_status() === PHP_SESSION_NONE) session_start();
+if (!headers_sent() && !ob_get_level()) {
+    @ini_set('zlib.output_compression', 'On');
+}
 $page_title = $page_title ?? 'Dashboard';
 $user = current_user();
 ?>
@@ -9,6 +12,11 @@ $user = current_user();
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <title><?= htmlspecialchars($page_title) ?> | CollabSpace</title>
+
+  <!-- Meta -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="description" content="Real-Time Collaboration Workspace - CollabSpace" />
 
   <!-- Theme Init (no flash) -->
   <script>
@@ -22,12 +30,10 @@ $user = current_user();
     })();
   </script>
 
-  <!-- Meta -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <meta name="color-scheme" content="light dark" />
-  <meta name="description" content="Real-Time Collaboration Workspace - CollabSpace" />
-
-  <!-- Fonts -->
+  <!-- High Speed Resource Preloading & DNS Prefetching -->
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
