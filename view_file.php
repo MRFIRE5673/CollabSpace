@@ -119,10 +119,11 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-$is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css','js','ts','jsx','tsx','php','py','sql','xml','log','env','yaml','yml','ini','conf','sh','bat','h','c','cpp','cs','java','rtf']);
+$is_collab_doc = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css','js','ts','jsx','tsx','php','py','sql','xml','log','env','yaml','yml','ini','conf','sh','bat','h','c','cpp','cs','java','rtf','docx','doc','xlsx','xls']);
+$is_editable   = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css','js','ts','jsx','tsx','php','py','sql','xml','log','env','yaml','yml','ini','conf','sh','bat','h','c','cpp','cs','java','rtf']);
 ?>
 
-<?php if ($is_editable): ?>
+<?php if ($is_collab_doc): ?>
 <!-- Real-Time Collaboration Status Bar -->
 <div class="bg-body-tertiary border-bottom px-4 py-2 d-flex align-items-center justify-content-between flex-wrap gap-2" style="flex-shrink:0;">
   <div class="d-flex align-items-center gap-2">
@@ -132,6 +133,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     </span>
     <span class="x-small text-muted ms-2" id="sync-last-saved">Auto-saved</span>
   </div>
+  <?php if ($is_editable): ?>
   <div class="d-flex align-items-center gap-2">
     <button type="button" class="btn btn-sm btn-outline-primary active" id="btn-mode-editor" onclick="toggleCollabView('editor')">
       <i class="bi bi-pencil-square me-1"></i>Real-Time Editor
@@ -140,10 +142,11 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
       <i class="bi bi-eye me-1"></i>Formatted Reader
     </button>
   </div>
+  <?php endif; ?>
 </div>
 <?php endif; ?>
 
-<div class="app-content p-0 d-flex flex-column" style="height: calc(100vh - <?= $is_editable ? '170px' : '128px' ?>); background: var(--cs-bg);">
+<div class="app-content p-0 d-flex flex-column" style="height: calc(100vh - <?= $is_collab_doc ? '170px' : '128px' ?>); background: var(--cs-bg);">
 
   <?php if ($is_editable): ?>
   <!-- Real-Time Collaborative Live Editor Container -->
@@ -262,13 +265,21 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
               </div>`;
             return;
           }
+          try {
+            const textDecoder = new TextDecoder('utf-8');
+            const sampleText = textDecoder.decode(arrayBuffer.slice(0, 150)).trim();
+            if (sampleText.startsWith('<') || sampleText.includes('<p>') || sampleText.includes('<div>') || sampleText.includes('<table')) {
+              document.getElementById('docx-output').innerHTML = textDecoder.decode(arrayBuffer);
+              return;
+            }
+          } catch(e) {}
           return mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
         })
         .then(result => {
           if (!result) return;
           if (result.value && result.value.trim().length > 0) {
             document.getElementById('docx-output').innerHTML = result.value;
-          } else {
+          } else if (!document.getElementById('docx-output').innerHTML.trim()) {
             document.getElementById('docx-output').innerHTML = '<p>Start typing to edit this document...</p>';
           }
         })
@@ -569,7 +580,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
 
     if (liveEditor && editorWrap && !editorWrap.classList.contains('d-none')) {
       return liveEditor.value;
-    } else if (docxOutput && docxOutput.offsetWidth > 0) {
+    } else if (docxOutput) {
       return docxOutput.innerHTML;
     } else if (excelTable) {
       try {
@@ -608,7 +619,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => {
       saveDocumentContent(false);
-    }, 400);
+    }, 200);
   }
 
   async function saveDocumentContent(isManual = false) {
@@ -654,39 +665,35 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     } catch (err) {}
   }
 
-  const liveEditor = document.getElementById('live-doc-editor');
-  if (liveEditor) {
-    liveEditor.addEventListener('input', triggerAutoSave);
-    liveEditor.addEventListener('keyup', triggerAutoSave);
-    liveEditor.addEventListener('blur', function() {
+  // Global Event Delegation for 100% Reliable Auto-Saving on all Editors
+  ['input', 'keyup', 'change', 'paste'].forEach(evtType => {
+    document.addEventListener(evtType, function(e) {
+      if (e.target && (e.target.closest('#docx-output') || e.target.closest('#excel-output') || e.target.closest('#live-doc-editor') || e.target.id === 'live-doc-editor' || e.target.id === 'docx-output')) {
+        triggerAutoSave();
+      }
+    });
+  });
+
+  document.addEventListener('focusout', function(e) {
+    if (e.target && (e.target.closest('#docx-output') || e.target.closest('#excel-output') || e.target.closest('#live-doc-editor') || e.target.id === 'live-doc-editor' || e.target.id === 'docx-output')) {
       isUserTyping = false;
       saveDocumentContent(false);
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    const docxOutput = document.getElementById('docx-output');
-    if (docxOutput) {
-      docxOutput.addEventListener('input', triggerAutoSave);
-      docxOutput.addEventListener('keyup', triggerAutoSave);
-      docxOutput.addEventListener('blur', () => {
-        isUserTyping = false;
-        saveDocumentContent(false);
-      });
-    }
-
-    const excelOutput = document.getElementById('excel-output');
-    if (excelOutput) {
-      excelOutput.addEventListener('input', triggerAutoSave);
-      excelOutput.addEventListener('keyup', triggerAutoSave);
-      excelOutput.addEventListener('blur', () => {
-        isUserTyping = false;
-        saveDocumentContent(false);
-      });
     }
   });
 
-  setInterval(pollDocumentSync, 1000);
+  window.addEventListener('beforeunload', function() {
+    if (isUserTyping) {
+      saveDocumentContent(false);
+    }
+  });
+
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden' && isUserTyping) {
+      saveDocumentContent(false);
+    }
+  });
+
+  setInterval(pollDocumentSync, 800);
 
   function promptRenameFile(id, oldName) {
     const newName = prompt('Enter new filename:', oldName);
