@@ -659,13 +659,16 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => {
       saveDocumentContent(false);
-    }, 600);
+    }, 200);
   }
 
   const liveEditor = document.getElementById('live-doc-editor');
   if (liveEditor) {
     liveEditor.addEventListener('input', triggerAutoSave);
-    liveEditor.addEventListener('blur', function() { isUserTyping = false; });
+    liveEditor.addEventListener('blur', function() {
+      isUserTyping = false;
+      saveDocumentContent(false);
+    });
   }
 
   document.addEventListener('DOMContentLoaded', function() {
@@ -673,7 +676,10 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     if (docxOutput) {
       docxOutput.addEventListener('input', triggerAutoSave);
       docxOutput.addEventListener('keyup', triggerAutoSave);
-      docxOutput.addEventListener('blur', () => { isUserTyping = false; });
+      docxOutput.addEventListener('blur', () => {
+        isUserTyping = false;
+        saveDocumentContent(false);
+      });
     }
 
     const excelOutput = document.getElementById('excel-output');
@@ -719,12 +725,12 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
         currentClientMtime = data.last_modified;
         setCurrentEditorContent(data.content);
         updateSyncStatus('Synced remote edit!', 'info');
-        setTimeout(() => updateSyncStatus('Live Sync Active', 'success'), 1200);
+        setTimeout(() => updateSyncStatus('Live Sync Active', 'success'), 800);
       }
     } catch (err) {}
   }
 
-  setInterval(pollDocumentSync, 1500);
+  setInterval(pollDocumentSync, 800);
 
   function promptRenameFile(id, oldName) {
     const newName = prompt('Enter new filename:', oldName);
