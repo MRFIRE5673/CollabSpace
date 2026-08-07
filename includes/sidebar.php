@@ -8,7 +8,7 @@ function nav_link(string $href, string $icon, string $label, string $current): s
 }
 ?>
 <!-- ─── Sidebar ─────────────────────────────────────────── -->
-<aside class="app-sidebar shadow" data-bs-theme="dark">
+<aside class="app-sidebar shadow">
 
   <!-- Brand -->
   <div class="sidebar-brand d-flex align-items-center gap-3">

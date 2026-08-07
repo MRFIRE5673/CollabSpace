@@ -100,10 +100,8 @@ h1, h2, h3, .brand-text, .hero-title {
   background: var(--cs-bg) !important;
 }
 
-/* ─── SIDEBAR MASTER DARK THEME ──────────────────────────── */
-.app-sidebar,
-[data-bs-theme="light"] .app-sidebar,
-[data-bs-theme="dark"] .app-sidebar {
+/* ─── SIDEBAR UI REVAMP ───────────────────────────────────── */
+.app-sidebar {
   width: var(--cs-sidebar-w) !important;
   flex-shrink: 0;
   position: fixed;
@@ -111,16 +109,30 @@ h1, h2, h3, .brand-text, .hero-title {
   z-index: 1040;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(170deg, #111827 0%, #0f172a 60%, #030712 100%) !important;
+  transition: transform var(--cs-t) var(--cs-ease);
+}
+
+/* Light Mode Sidebar */
+[data-bs-theme="light"] .app-sidebar {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-right: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* Dark Mode Sidebar */
+[data-bs-theme="dark"] .app-sidebar {
+  background: linear-gradient(180deg, #0f172a 0%, #090d16 100%) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #ffffff !important;
-  transition: transform var(--cs-t) var(--cs-ease);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25) !important;
 }
 
 .sidebar-wrapper {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  padding: 8px 0;
 }
 
 .sidebar-menu {
@@ -132,113 +144,193 @@ h1, h2, h3, .brand-text, .hero-title {
   list-style: none !important;
 }
 
-/* Sidebar Brand */
-.app-sidebar .sidebar-brand,
-[data-bs-theme="light"] .app-sidebar .sidebar-brand {
-  padding: 18px 16px 16px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  background: rgba(255, 255, 255, 0.02) !important;
+/* ── Brand Section ── */
+.app-sidebar .sidebar-brand {
+  padding: 16px 18px !important;
+  height: 64px !important;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
+
+[data-bs-theme="light"] .app-sidebar .sidebar-brand {
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: rgba(248, 250, 252, 0.8) !important;
+}
+[data-bs-theme="dark"] .app-sidebar .sidebar-brand {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(15, 23, 42, 0.8) !important;
+}
+
 .sidebar-brand-logo {
   width: 38px; height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--cs-primary), var(--cs-secondary));
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 14px rgba(92,73,224,.5);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
   flex-shrink: 0;
 }
-.app-sidebar .brand-text,
+
 [data-bs-theme="light"] .app-sidebar .brand-text {
-  color: #ffffff !important;
-  font-size: 1.05rem !important;
-  letter-spacing: -.01em;
+  color: #0f172a !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  letter-spacing: -.02em;
 }
-.app-sidebar .brand-tagline,
+[data-bs-theme="dark"] .app-sidebar .brand-text {
+  color: #ffffff !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  letter-spacing: -.02em;
+}
+
 [data-bs-theme="light"] .app-sidebar .brand-tagline {
-  font-size: .6rem !important;
-  color: #94a3b8 !important;
-  letter-spacing: .05em;
+  font-size: .62rem !important;
+  color: #64748b !important;
+  letter-spacing: .08em;
   text-transform: uppercase;
-  line-height: 1;
+  font-weight: 600;
+  line-height: 1.2;
 }
-
-/* Live indicator on brand */
-.brand-live-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--cs-online);
-  display: inline-block;
-  box-shadow: 0 0 8px var(--cs-online);
-  animation: livePulse 2s ease infinite;
-  flex-shrink: 0;
-}
-
-/* Nav Items */
-.app-sidebar .nav-sidebar .nav-link,
-[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link {
-  border-radius: 10px !important;
-  margin: 3px 10px !important;
-  padding: 9px 12px !important;
-  color: #cbd5e1 !important;
-  background: transparent !important;
-  font-weight: 500 !important;
-  transition: background var(--cs-t) var(--cs-ease),
-              color var(--cs-t) var(--cs-ease),
-              box-shadow var(--cs-t) var(--cs-ease) !important;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.app-sidebar .nav-sidebar .nav-link:hover,
-[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #ffffff !important;
-}
-.app-sidebar .nav-sidebar .nav-link.active,
-[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link.active {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.45) !important;
-}
-.app-sidebar .nav-sidebar .nav-icon,
-[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-icon {
-  font-size: .95rem !important;
-  width: 1.3rem !important;
+[data-bs-theme="dark"] .app-sidebar .brand-tagline {
+  font-size: .62rem !important;
   color: #94a3b8 !important;
-}
-.app-sidebar .nav-sidebar .nav-link.active .nav-icon,
-[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link.active .nav-icon {
-  color: #ffffff !important;
-  opacity: 1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-/* Nav Section Headers */
-.app-sidebar .sidebar-menu .nav-header,
+/* ── Section Headers ── */
 [data-bs-theme="light"] .app-sidebar .sidebar-menu .nav-header {
+  color: #94a3b8 !important;
+  background: transparent !important;
+  font-size: .65rem !important;
+  font-weight: 700 !important;
+  letter-spacing: .12em !important;
+  padding: 16px 20px 6px !important;
+  margin: 0 !important;
+  text-transform: uppercase !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+[data-bs-theme="dark"] .app-sidebar .sidebar-menu .nav-header {
   color: #64748b !important;
   background: transparent !important;
   font-size: .65rem !important;
   font-weight: 700 !important;
   letter-spacing: .12em !important;
-  padding: 14px 22px 5px !important;
+  padding: 16px 20px 6px !important;
   margin: 0 !important;
   text-transform: uppercase !important;
   border: none !important;
   box-shadow: none !important;
 }
 
-/* Sidebar Footer */
-.app-sidebar .sidebar-footer,
-[data-bs-theme="light"] .app-sidebar .sidebar-footer {
-  background: rgba(255, 255, 255, 0.03) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-  padding: 12px 14px !important;
+/* ── Nav Items ── */
+[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link {
+  border-radius: 12px !important;
+  margin: 3px 12px !important;
+  padding: 9px 14px !important;
+  color: #334155 !important;
+  background: transparent !important;
+  font-weight: 500 !important;
+  font-size: .88rem !important;
+  transition: all var(--cs-t) var(--cs-ease) !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link:hover {
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: #4f46e5 !important;
+}
+[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link .nav-icon {
+  font-size: .95rem !important;
+  width: 1.3rem !important;
+  color: #64748b !important;
+  transition: color var(--cs-t) var(--cs-ease) !important;
+}
+[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link:hover .nav-icon {
+  color: #4f46e5 !important;
+}
+[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link.active {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35) !important;
+}
+[data-bs-theme="light"] .app-sidebar .nav-sidebar .nav-link.active .nav-icon {
   color: #ffffff !important;
 }
-.app-sidebar .sidebar-footer .small,
-[data-bs-theme="light"] .app-sidebar .sidebar-footer .small {
+
+[data-bs-theme="dark"] .app-sidebar .nav-sidebar .nav-link {
+  border-radius: 12px !important;
+  margin: 3px 12px !important;
+  padding: 9px 14px !important;
+  color: #cbd5e1 !important;
+  background: transparent !important;
+  font-weight: 500 !important;
+  font-size: .88rem !important;
+  transition: all var(--cs-t) var(--cs-ease) !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+[data-bs-theme="dark"] .app-sidebar .nav-sidebar .nav-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
   color: #ffffff !important;
+}
+[data-bs-theme="dark"] .app-sidebar .nav-sidebar .nav-link .nav-icon {
+  font-size: .95rem !important;
+  width: 1.3rem !important;
+  color: #94a3b8 !important;
+}
+[data-bs-theme="dark"] .app-sidebar .nav-sidebar .nav-link:hover .nav-icon {
+  color: #ffffff !important;
+}
+[data-bs-theme="dark"] .app-sidebar .nav-sidebar .nav-link.active {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.45) !important;
+}
+[data-bs-theme="dark"] .app-sidebar .nav-sidebar .nav-link.active .nav-icon {
+  color: #ffffff !important;
+}
+
+/* ── Sidebar Footer (User Card) ── */
+[data-bs-theme="light"] .app-sidebar .sidebar-footer {
+  margin: 12px !important;
+  border-radius: 14px !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 10px 12px !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02) !important;
+}
+[data-bs-theme="light"] .app-sidebar .sidebar-footer .small {
+  color: #0f172a !important;
+}
+[data-bs-theme="light"] .app-sidebar .sidebar-footer a {
+  color: #64748b !important;
+}
+
+[data-bs-theme="dark"] .app-sidebar .sidebar-footer {
+  margin: 12px !important;
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 10px 12px !important;
+  color: #ffffff !important;
+}
+[data-bs-theme="dark"] .app-sidebar .sidebar-footer .small {
+  color: #ffffff !important;
+}
+[data-bs-theme="dark"] .app-sidebar .sidebar-footer a {
+  color: #94a3b8 !important;
 }
 
 /* ─── TOP NAVBAR & MAIN LAYOUT ───────────────────────────── */
