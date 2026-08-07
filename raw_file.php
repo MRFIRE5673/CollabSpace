@@ -2,84 +2,61 @@
 // ============================================================
 // Raw File Streamer — High Performance Public Streamer
 // Enables Microsoft Office, Google Docs, & Browser Viewers
-// Also serves chat-uploaded files by filename
+// Also serves chat-uploaded files and direct uploads
 // ============================================================
 require_once __DIR__ . '/config/database.php';
 
+// Turn off output buffering quirks
+if (ob_get_level()) ob_end_clean();
+ob_start();
+
 $fid      = (int)($_GET['id'] ?? 0);
 $fname    = basename(trim($_GET['file'] ?? ''));
-$chatMode = isset($_GET['chat']) && $_GET['chat'] == '1';
-
-$mime_map = [
-    'pdf'  => 'application/pdf',
-    'jpg'  => 'image/jpeg', 'jpeg' => 'image/jpeg',
-    'png'  => 'image/png',  'gif'  => 'image/gif',
-    'webp' => 'image/webp', 'svg'  => 'image/svg+xml',
-    'txt'  => 'text/plain; charset=utf-8',
-    'csv'  => 'text/plain; charset=utf-8',
-    'json' => 'application/json',
-    'mp4'  => 'video/mp4',  'webm' => 'video/webm',
-    'mp3'  => 'audio/mpeg', 'wav'  => 'audio/wav',
-    'doc'  => 'application/msword',
-    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'xls'  => 'application/vnd.ms-excel',
-    'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'ppt'  => 'application/vnd.ms-powerpoint',
-    'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'zip'  => 'application/zip',
-    'rar'  => 'application/x-rar-compressed',
-];
-
-// ── Chat file mode: stream by raw filename from uploads/ ──────
-if ($chatMode && $fname) {
-    $file_path    = UPLOAD_DIR . $fname;
-    $display_name = $fname;
-    if (!file_exists($file_path)) {
-        http_response_code(404);
-        echo 'Chat file not found.';
-        exit;
-    }
-    $ext  = strtolower(pathinfo($fname, PATHINFO_EXTENSION));
-    $mime = $mime_map[$ext] ?? 'application/octet-stream';
-    header("Content-Type: $mime");
-    header('Content-Disposition: inline; filename="' . rawurlencode($display_name) . '"');
-    header('Content-Length: ' . filesize($file_path));
-    header('Cache-Control: private, max-age=3600');
-    readfile($file_path);
-    exit;
-}
-
-
 
 $db = getDB();
+$file_rec = null;
+
+// 1. Query files table by ID
 if ($fid) {
-    $stmt = $db->prepare("SELECT * FROM files WHERE id = ?");
+    $stmt = $db->prepare("SELECT id, file_name, original_name, file_path FROM files WHERE id = ?");
     $stmt->execute([$fid]);
     $file_rec = $stmt->fetch();
-    if (!$file_rec) {
-        $cstmt = $db->prepare("SELECT id, file_path AS file_name, file_name AS original_name FROM chats WHERE id = ?");
-        $cstmt->execute([$fid]);
-        $chat_rec = $cstmt->fetch();
-        if ($chat_rec) {
-            $file_rec = $chat_rec;
-        }
+}
+
+// 2. Query chats table by ID
+if (!$file_rec && $fid) {
+    $cstmt = $db->prepare("SELECT id, file_path AS file_name, file_name AS original_name FROM chats WHERE id = ?");
+    $cstmt->execute([$fid]);
+    $chat_rec = $cstmt->fetch();
+    if ($chat_rec) {
+        $file_rec = $chat_rec;
     }
-} elseif ($fname) {
-    $stmt = $db->prepare("SELECT * FROM files WHERE file_name = ?");
-    $stmt->execute([$fname]);
+}
+
+// 3. Query files table by filename
+if (!$file_rec && $fname) {
+    $stmt = $db->prepare("SELECT id, file_name, original_name, file_path FROM files WHERE file_name = ? OR original_name = ? OR file_path = ?");
+    $stmt->execute([$fname, $fname, $fname]);
     $file_rec = $stmt->fetch();
-    if (!$file_rec) {
-        $cstmt = $db->prepare("SELECT id, file_path AS file_name, file_name AS original_name FROM chats WHERE file_path = ? OR file_name = ?");
-        $cstmt->execute([$fname, $fname]);
-        $chat_rec = $cstmt->fetch();
-        if ($chat_rec) {
-            $file_rec = $chat_rec;
-        } elseif (file_exists(UPLOAD_DIR . $fname)) {
-            $file_rec = ['id' => 0, 'file_name' => $fname, 'original_name' => $fname];
-        }
+}
+
+// 4. Query chats table by filename
+if (!$file_rec && $fname) {
+    $cstmt = $db->prepare("SELECT id, file_path AS file_name, file_name AS original_name FROM chats WHERE file_path = ? OR file_name = ?");
+    $cstmt->execute([$fname, $fname]);
+    $chat_rec = $cstmt->fetch();
+    if ($chat_rec) {
+        $file_rec = $chat_rec;
     }
-} else {
-    $file_rec = null;
+}
+
+// 5. Fallback: Direct disk match
+if (!$file_rec && $fname) {
+    $file_rec = [
+        'id' => 0,
+        'file_name' => $fname,
+        'original_name' => $fname
+    ];
 }
 
 if (!$file_rec) {
@@ -88,13 +65,14 @@ if (!$file_rec) {
     exit;
 }
 
-// Locate physical file on disk across potential path naming variants
+// Search physical disk location
 $file_path = null;
-$possible_names = array_filter([
+$possible_names = array_unique(array_filter([
     $file_rec['file_name'] ?? null,
+    $file_rec['file_path'] ?? null,
     $file_rec['original_name'] ?? null,
     $fname ?? null
-]);
+]));
 
 foreach ($possible_names as $pname) {
     $target = UPLOAD_DIR . basename($pname);
@@ -120,6 +98,8 @@ $mime_map = [
     'gif'        => 'image/gif',
     'webp'       => 'image/webp',
     'svg'        => 'image/svg+xml',
+    'bmp'        => 'image/bmp',
+    'ico'        => 'image/x-icon',
     'txt'        => 'text/plain; charset=utf-8',
     'csv'        => 'text/plain; charset=utf-8',
     'json'       => 'application/json',
@@ -138,8 +118,11 @@ $mime_map = [
 
 $mime = $mime_map[$ext] ?? 'application/octet-stream';
 
+// Clear output buffer completely so no extra bytes corrupt binary images
+ob_clean();
+
 header("Content-Type: $mime");
-header('Content-Disposition: inline; filename="' . rawurlencode($file_rec['original_name']) . '"');
+header('Content-Disposition: inline; filename="' . rawurlencode($file_rec['original_name'] ?? $file_rec['file_name']) . '"');
 header('Content-Length: ' . filesize($file_path));
 header('Access-Control-Allow-Origin: *');
 header('Cache-Control: public, max-age=86400');

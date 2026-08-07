@@ -344,8 +344,18 @@ $is_editable = in_array($ext, ['txt','md','json','csv','html','css','js','php','
 
   <?php elseif (in_array($ext, ['jpg','jpeg','png','gif','webp','svg','bmp','ico'])): ?>
     <!-- ── Image Viewer ── -->
-    <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 overflow-auto bg-dark">
-      <img src="<?= $raw_stream_src ?>" alt="<?= htmlspecialchars($original_name) ?>" class="img-fluid rounded-3 shadow-lg" style="max-height: 80vh; object-fit: contain;">
+    <div class="flex-grow-1 d-flex align-items-center justify-content-center p-4 overflow-auto bg-dark position-relative">
+      <img src="<?= $raw_stream_src ?>" alt="<?= htmlspecialchars($original_name) ?>" class="img-fluid rounded-3 shadow-lg" style="max-height: 80vh; object-fit: contain;" onerror="this.classList.add('d-none'); document.getElementById('img-error-fallback').classList.remove('d-none');">
+      <div id="img-error-fallback" class="card border-0 shadow-lg text-center p-5 d-none" style="max-width:440px;border-radius:20px;background:var(--cs-surface);">
+        <div class="rounded-circle bg-warning bg-opacity-15 text-warning mx-auto mb-3 d-flex align-items-center justify-content-center" style="width:64px;height:64px;">
+          <i class="bi bi-image-fill fs-2"></i>
+        </div>
+        <h6 class="fw-bold mb-1">Image File Unavailable</h6>
+        <p class="small text-muted mb-3">The image binary could not be loaded from disk storage.</p>
+        <a href="<?= $raw_stream_src ?>" download="<?= htmlspecialchars($original_name) ?>" class="btn btn-sm btn-primary rounded-pill px-4 mx-auto">
+          <i class="bi bi-download me-1"></i>Download File
+        </a>
+      </div>
     </div>
 
   <?php elseif (in_array($ext, ['doc','ppt','pptx'])): ?>
