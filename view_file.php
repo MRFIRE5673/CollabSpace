@@ -89,7 +89,14 @@ include __DIR__ . '/includes/header.php';
         <i class="bi bi-arrow-left me-1"></i> Back
       </a>
       <div>
-        <h2 class="fw-bold mb-0 fs-5" style="font-family:'Outfit',sans-serif;"><?= htmlspecialchars($original_name) ?></h2>
+        <div class="d-flex align-items-center gap-2">
+          <h2 class="fw-bold mb-0 fs-5" style="font-family:'Outfit',sans-serif;" id="doc-title-heading"><?= htmlspecialchars($original_name) ?></h2>
+          <?php if (!empty($file_rec['id']) && (is_admin() || ($file_rec['uploaded_by'] ?? 0) == $uid)): ?>
+          <button class="btn btn-sm btn-link text-muted p-0" onclick="promptRenameFile(<?= $file_rec['id'] ?>, '<?= htmlspecialchars($original_name, ENT_QUOTES) ?>')" title="Rename File">
+            <i class="bi bi-pencil-square fs-6"></i>
+          </button>
+          <?php endif; ?>
+        </div>
         <div class="x-small text-muted">
           Uploaded by <?= htmlspecialchars($file_rec['uploader_name'] ?? 'System') ?>
           <?php if (!empty($file_rec['uploaded_at'])): ?> · <?= time_ago($file_rec['uploaded_at']) ?><?php endif; ?>
@@ -112,7 +119,7 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-$is_editable = in_array($ext, ['txt','md','json','csv','html','css','js','php','py','sql','xml','log','env','yaml']);
+$is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css','js','ts','jsx','tsx','php','py','sql','xml','log','env','yaml','yml','ini','conf','sh','bat','h','c','cpp','cs','java','rtf']);
 ?>
 
 <?php if ($is_editable): ?>
@@ -528,6 +535,25 @@ $is_editable = in_array($ext, ['txt','md','json','csv','html','css','js','php','
   }
 
   setInterval(pollDocumentSync, 1500);
+
+  function promptRenameFile(id, oldName) {
+    const newName = prompt('Enter new filename:', oldName);
+    if (!newName || newName === oldName) return;
+    const fd = new FormData();
+    fd.append('file_id', id);
+    fd.append('new_name', newName);
+    fetch('api/files.php?action=rename', { method: 'POST', body: fd })
+      .then(r => r.json())
+      .then(res => {
+        if (res.success) {
+          const heading = document.getElementById('doc-title-heading');
+          if (heading) heading.textContent = res.new_name;
+          showToast('File renamed!', 'success');
+        } else {
+          showToast(res.message || 'Failed to rename.', 'danger');
+        }
+      }).catch(() => showToast('Network error.', 'danger'));
+  }
 </script>
 
 <style>

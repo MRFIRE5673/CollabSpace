@@ -212,6 +212,7 @@ include __DIR__ . '/includes/header.php';
               <li><a class="dropdown-item py-2" href="<?= $fileUrl ?>" download="<?= htmlspecialchars($f['original_name']) ?>"><i class="bi bi-download me-2 text-success"></i>Download File</a></li>
               <li><button class="dropdown-item py-2" onclick="copyShareLink('<?= $fileUrl ?>')"><i class="bi bi-link-45deg me-2 text-info"></i>Copy Share Link</button></li>
               <?php if (is_admin() || $f['uploaded_by'] == $uid): ?>
+              <li><button class="dropdown-item py-2" onclick="renameFileAjax(<?= $f['id'] ?>, '<?= htmlspecialchars($f['original_name'], ENT_QUOTES) ?>')"><i class="bi bi-pencil-square me-2 text-warning"></i>Rename File</button></li>
               <li><hr class="dropdown-divider"></li>
               <li><button class="dropdown-item py-2 text-danger" onclick="deleteFileAjax(<?= $f['id'] ?>)"><i class="bi bi-trash me-2"></i>Delete File</button></li>
               <?php endif; ?>
@@ -418,6 +419,26 @@ async function deleteFileAjax(id) {
   } catch (e) {
     alert('Delete request error.');
   }
+}
+
+function renameFileAjax(id, oldName) {
+  const newName = prompt('Enter new file name:', oldName);
+  if (!newName || newName === oldName) return;
+  const fd = new FormData();
+  fd.append('file_id', id);
+  fd.append('new_name', newName);
+
+  fetch('api/files.php?action=rename', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        showToast('File renamed!', 'success');
+        setTimeout(() => location.reload(), 600);
+      } else {
+        showToast(res.message || 'Failed to rename file.', 'danger');
+      }
+    })
+    .catch(() => showToast('Network error.', 'danger'));
 }
 
 // Drag over animation for dropzone

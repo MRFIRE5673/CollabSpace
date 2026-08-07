@@ -68,6 +68,34 @@ switch ($action) {
         echo json_encode(['success' => true]);
         break;
 
+    case 'rename':
+        $fid  = (int)($_POST['file_id'] ?? 0);
+        $name = trim($_POST['new_name'] ?? '');
+
+        if (!$fid || !$name) {
+            echo json_encode(['success' => false, 'message' => 'File ID and new name required.']);
+            exit;
+        }
+
+        $f = $db->prepare("SELECT * FROM files WHERE id=?");
+        $f->execute([$fid]);
+        $f = $f->fetch();
+
+        if (!$f) {
+            echo json_encode(['success' => false, 'message' => 'File not found.']);
+            exit;
+        }
+        if (!is_admin() && $f['uploaded_by'] != $uid) {
+            echo json_encode(['success' => false, 'message' => 'Permission denied.']);
+            exit;
+        }
+
+        $stmt = $db->prepare("UPDATE files SET original_name=? WHERE id=?");
+        $stmt->execute([$name, $fid]);
+
+        echo json_encode(['success' => true, 'new_name' => $name]);
+        break;
+
     case 'list':
         $project_id = (int)($_GET['project_id'] ?? 0);
         $query = "SELECT f.*, u.name AS uploader_name FROM files f JOIN users u ON u.id=f.uploaded_by";
