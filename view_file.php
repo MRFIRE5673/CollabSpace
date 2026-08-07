@@ -253,9 +253,11 @@ $is_editable   = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css
         }
       }
 
+      let rawDocBuffer = null;
       fetch('<?= $raw_stream_src ?>')
         .then(r => r.arrayBuffer())
         .then(arrayBuffer => {
+          rawDocBuffer = arrayBuffer;
           if (!arrayBuffer || arrayBuffer.byteLength === 0) {
             document.getElementById('docx-output').innerHTML = `
               <div class="text-center py-5 text-muted">
@@ -284,10 +286,20 @@ $is_editable   = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css
           }
         })
         .catch(err => {
-          console.warn('Mammoth render fallback:', err);
-          document.getElementById('docx-mammoth-view').classList.add('d-none');
-          document.getElementById('docx-iframe-view').classList.remove('d-none');
-          document.getElementById('docx-frame').src = 'https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>';
+          console.warn('Mammoth render fallback, using live editor:', err);
+          if (rawDocBuffer) {
+            try {
+              const textDecoder = new TextDecoder('utf-8');
+              const text = textDecoder.decode(rawDocBuffer);
+              if (text && text.trim().length > 0 && !text.includes('\0')) {
+                document.getElementById('docx-output').innerHTML = text;
+                return;
+              }
+            } catch(e) {}
+          }
+          if (!document.getElementById('docx-output').innerHTML.trim()) {
+            document.getElementById('docx-output').innerHTML = '<p>Start typing to edit this document...</p>';
+          }
         });
     </script>
 
