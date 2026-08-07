@@ -41,20 +41,6 @@ function nav_link(string $href, string $icon, string $label, string $current, ?s
     </div>
   </div>
 
-  <!-- Workspace Selector Card -->
-  <div class="sidebar-workspace-card mx-3 my-2 p-2 rounded-3 d-flex align-items-center justify-content-between">
-    <div class="d-flex align-items-center gap-2 overflow-hidden">
-      <div class="rounded-circle bg-primary bg-opacity-15 text-primary p-2 d-flex align-items-center justify-content-center" style="width:28px;height:28px;">
-        <i class="bi bi-building fs-6"></i>
-      </div>
-      <div class="overflow-hidden">
-        <div class="x-small fw-bold text-truncate" style="font-size:.72rem;">Main Organization</div>
-        <div class="text-muted x-small" style="font-size:.64rem;">Enterprise Plan</div>
-      </div>
-    </div>
-    <span class="badge bg-success bg-opacity-15 text-success x-small" style="font-size:.58rem;padding:2px 6px;">Live</span>
-  </div>
-
   <div class="sidebar-wrapper px-2">
     <nav class="sidebar-nav">
       <ul class="nav sidebar-menu flex-column" role="menu">
