@@ -68,7 +68,10 @@ switch ($action) {
         }
 
         if (!is_dir(UPLOAD_DIR)) {
-            @mkdir(UPLOAD_DIR, 0777, true);
+            $mkdirResult = @mkdir(UPLOAD_DIR, 0755, true);
+            if (!$mkdirResult) {
+                error_log('[CollabSpace] Failed to create UPLOAD_DIR: ' . UPLOAD_DIR);
+            }
         }
 
         $filePath = UPLOAD_DIR . $fname;
@@ -76,7 +79,9 @@ switch ($action) {
         // Save content to file
         $bytes = file_put_contents($filePath, $content);
         if ($bytes === false) {
-            echo json_encode(['success' => false, 'message' => 'Failed to save file on server.']);
+            $errMsg = 'Failed to write file: ' . $filePath . ' (dir writable: ' . (is_writable(UPLOAD_DIR) ? 'yes' : 'no') . ', dir exists: ' . (is_dir(UPLOAD_DIR) ? 'yes' : 'no') . ')';
+            error_log('[CollabSpace] ' . $errMsg);
+            echo json_encode(['success' => false, 'message' => $errMsg]);
             exit;
         }
 

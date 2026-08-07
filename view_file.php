@@ -636,7 +636,15 @@ $is_editable   = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css
 
   async function saveDocumentContent(isManual = false) {
     const content = getCurrentEditorContent();
-    if (content === null) return;
+    console.log('[AutoSave] content length:', content === null ? 'NULL' : content.length, '| file:', fileName, '| fileId:', fileId);
+    if (content === null) {
+      console.warn('[AutoSave] content is null - nothing to save');
+      return;
+    }
+    if (content.length === 0) {
+      console.warn('[AutoSave] content is empty string - skipping save to avoid wiping file');
+      return;
+    }
     updateSyncStatus('Syncing to server...', 'info');
 
     const fd = new FormData();
@@ -646,7 +654,9 @@ $is_editable   = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css
 
     try {
       const res = await fetch('api/documents.php?action=save', { method: 'POST', body: fd });
-      const data = await res.json();
+      let data;
+      try { data = await res.json(); } catch(e) { data = {}; }
+      console.log('[AutoSave] server response:', data, '| HTTP:', res.status);
       if (data.success) {
         currentClientMtime = data.last_modified;
         isUserTyping = false;
@@ -655,9 +665,13 @@ $is_editable   = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css
         if (syncElem) syncElem.textContent = 'Saved just now';
         if (isManual) showToast('Document saved!', 'success');
       } else {
-        updateSyncStatus('Save failed', 'danger');
+        const errMsg = data.message || data.error || 'Unknown error';
+        console.error('[AutoSave] Save FAILED:', errMsg);
+        updateSyncStatus('Save failed: ' + errMsg, 'danger');
+        showToast('Auto-save failed: ' + errMsg, 'danger');
       }
     } catch (err) {
+      console.error('[AutoSave] Network error:', err);
       updateSyncStatus('Offline / Retry', 'danger');
     }
   }
