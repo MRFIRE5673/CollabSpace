@@ -228,7 +228,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
         if (!output) return;
         const htmlContent = output.innerHTML;
         const fd = new FormData();
-        fd.append('file', '<?= urlencode($file_name) ?>');
+        fd.append('file', fileName);
         fd.append('content', htmlContent);
 
         try {
@@ -362,7 +362,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
         const csvContent = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
         
         const fd = new FormData();
-        fd.append('file', '<?= urlencode($file_name) ?>');
+        fd.append('file', fileName);
         fd.append('content', csvContent);
 
         try {

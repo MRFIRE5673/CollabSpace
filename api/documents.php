@@ -51,20 +51,27 @@ switch ($action) {
         break;
 
     case 'save':
-        $fname   = trim($_POST['file'] ?? '');
+        $fname   = rawurldecode(trim($_POST['file'] ?? ''));
+        $fname   = basename($fname);
+        $fid     = (int)($_POST['file_id'] ?? 0);
         $content = $_POST['content'] ?? '';
+
+        if (!$fname && $fid) {
+            $stmt = $db->prepare("SELECT file_name FROM files WHERE id=?");
+            $stmt->execute([$fid]);
+            $fname = $stmt->fetchColumn() ?: '';
+        }
 
         if (!$fname) {
             echo json_encode(['success' => false, 'message' => 'Invalid file name.']);
             exit;
         }
 
-        $filePath = UPLOAD_DIR . $fname;
-        // Verify path safety
-        if (basename($filePath) !== $fname) {
-            echo json_encode(['success' => false, 'message' => 'Invalid file path.']);
-            exit;
+        if (!is_dir(UPLOAD_DIR)) {
+            @mkdir(UPLOAD_DIR, 0777, true);
         }
+
+        $filePath = UPLOAD_DIR . $fname;
 
         // Save content to file
         $bytes = file_put_contents($filePath, $content);
