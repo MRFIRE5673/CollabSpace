@@ -612,9 +612,79 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     }
   }
 
+  function getCurrentEditorContent() {
+    const liveEditor  = document.getElementById('live-doc-editor');
+    const docxOutput  = document.getElementById('docx-output');
+    const excelTable  = document.querySelector('#excel-output table');
+    const editorWrap  = document.getElementById('collab-editor-container');
+
+    if (liveEditor && editorWrap && !editorWrap.classList.contains('d-none')) {
+      return liveEditor.value;
+    } else if (docxOutput && docxOutput.offsetWidth > 0) {
+      return docxOutput.innerHTML;
+    } else if (excelTable) {
+      try {
+        const wb = XLSX.utils.table_to_book(excelTable);
+        return XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+      } catch (e) {
+        return null;
+      }
+    } else if (liveEditor) {
+      return liveEditor.value;
+    }
+    return null;
+  }
+
+  function setCurrentEditorContent(newContent) {
+    const liveEditor = document.getElementById('live-doc-editor');
+    const docxOutput = document.getElementById('docx-output');
+
+    if (liveEditor) {
+      const start = liveEditor.selectionStart;
+      const end   = liveEditor.selectionEnd;
+      if (liveEditor.value !== newContent) {
+        liveEditor.value = newContent;
+        try { liveEditor.setSelectionRange(start, end); } catch (e) {}
+      }
+    } else if (docxOutput) {
+      if (docxOutput.innerHTML !== newContent) {
+        docxOutput.innerHTML = newContent;
+      }
+    }
+  }
+
+  function triggerAutoSave() {
+    isUserTyping = true;
+    updateSyncStatus('⚡ Auto-saving edits...', 'warning');
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      saveDocumentContent(false);
+    }, 600);
+  }
+
+  const liveEditor = document.getElementById('live-doc-editor');
+  if (liveEditor) {
+    liveEditor.addEventListener('input', triggerAutoSave);
+    liveEditor.addEventListener('blur', function() { isUserTyping = false; });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const docxOutput = document.getElementById('docx-output');
+    if (docxOutput) {
+      docxOutput.addEventListener('input', triggerAutoSave);
+      docxOutput.addEventListener('keyup', triggerAutoSave);
+      docxOutput.addEventListener('blur', () => { isUserTyping = false; });
+    }
+
+    const excelOutput = document.getElementById('excel-output');
+    if (excelOutput) {
+      excelOutput.addEventListener('input', triggerAutoSave);
+    }
+  });
+
   async function saveDocumentContent(isManual = false) {
-    if (!liveEditor) return;
-    const content = liveEditor.value;
+    const content = getCurrentEditorContent();
+    if (content === null) return;
     updateSyncStatus('Syncing to server...', 'info');
 
     const fd = new FormData();
@@ -628,7 +698,8 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
         currentClientMtime = data.last_modified;
         isUserTyping = false;
         updateSyncStatus('Live Sync Active', 'success');
-        document.getElementById('sync-last-saved').textContent = 'Saved just now';
+        const syncElem = document.getElementById('sync-last-saved');
+        if (syncElem) syncElem.textContent = 'Saved just now';
         if (isManual) showToast('Document saved!', 'success');
       } else {
         updateSyncStatus('Save failed', 'danger');
@@ -639,21 +710,16 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
   }
 
   async function pollDocumentSync() {
-    if (!liveEditor || isUserTyping) return;
+    if (isUserTyping) return;
     try {
       const res = await fetch(`api/documents.php?action=poll&file=${encodeURIComponent(fileName)}&client_mtime=${currentClientMtime}`);
       const data = await res.json();
 
       if (data.has_changes && data.content !== undefined) {
         currentClientMtime = data.last_modified;
-        if (liveEditor && liveEditor.value !== data.content) {
-          const start = liveEditor.selectionStart;
-          const end   = liveEditor.selectionEnd;
-          liveEditor.value = data.content;
-          liveEditor.setSelectionRange(start, end);
-          updateSyncStatus('Synced remote edit!', 'info');
-          setTimeout(() => updateSyncStatus('Live Sync Active', 'success'), 1200);
-        }
+        setCurrentEditorContent(data.content);
+        updateSyncStatus('Synced remote edit!', 'info');
+        setTimeout(() => updateSyncStatus('Live Sync Active', 'success'), 1200);
       }
     } catch (err) {}
   }
