@@ -47,7 +47,7 @@ function nav_link(string $href, string $icon, string $label, string $current, ?s
         <i class="bi bi-building fs-6"></i>
       </div>
       <div class="overflow-hidden">
-        <div class="x-small fw-bold text-truncate brand-text" style="font-size:.72rem;">Main Organization</div>
+        <div class="x-small fw-bold text-truncate" style="font-size:.72rem;">Main Organization</div>
         <div class="text-muted x-small" style="font-size:.64rem;">Enterprise Plan</div>
       </div>
     </div>
