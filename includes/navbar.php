@@ -10,7 +10,7 @@ $notifs->execute([$uid]);
 $notifs = $notifs->fetchAll();
 ?>
 <!-- ─── Top Navbar ──────────────────────────────────────── -->
-<nav class="app-header navbar navbar-expand bg-body shadow-sm border-bottom">
+<nav class="app-header navbar navbar-expand border-bottom">
   <div class="container-fluid px-3">
     <!-- Sidebar toggle -->
     <ul class="navbar-nav">

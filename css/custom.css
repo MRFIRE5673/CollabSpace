@@ -241,15 +241,65 @@ h1, h2, h3, .brand-text, .hero-title {
   color: #ffffff !important;
 }
 
-/* ─── TOP NAVBAR ─────────────────────────────────────────── */
+/* ─── TOP NAVBAR & MAIN LAYOUT ───────────────────────────── */
 .app-header {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  left: var(--cs-sidebar-w) !important;
+  height: 64px !important;
+  z-index: 1030 !important;
   background: var(--cs-surface) !important;
   border-bottom: 1px solid var(--cs-border) !important;
   backdrop-filter: blur(16px) !important;
   box-shadow: var(--cs-shadow-xs) !important;
-  transition: background var(--cs-t-slow) var(--cs-ease),
-              border-color var(--cs-t-slow) var(--cs-ease) !important;
+  transition: left var(--cs-t) var(--cs-ease) !important;
+  display: flex !important;
+  align-items: center !important;
 }
+
+.app-main {
+  flex: 1;
+  margin-left: var(--cs-sidebar-w);
+  padding-top: 64px;
+  min-width: 0;
+  width: calc(100% - var(--cs-sidebar-w));
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  transition: margin-left var(--cs-t) var(--cs-ease), width var(--cs-t) var(--cs-ease);
+}
+
+/* Sidebar Toggle States */
+body.sidebar-collapsed .app-sidebar {
+  transform: translateX(-100%);
+}
+body.sidebar-collapsed .app-header {
+  left: 0 !important;
+}
+body.sidebar-collapsed .app-main {
+  margin-left: 0;
+  width: 100%;
+}
+
+@media (max-width: 991.98px) {
+  .app-sidebar {
+    transform: translateX(-100%);
+  }
+  .app-header {
+    left: 0 !important;
+  }
+  .app-main {
+    margin-left: 0;
+    width: 100%;
+  }
+  body.sidebar-open .app-sidebar {
+    transform: translateX(0);
+    box-shadow: 0 0 40px rgba(0,0,0,0.5) !important;
+  }
+}
+
+/* ─── SEARCH & TOP NAV CONTROLS ──────────────────────────── */
 
 /* Search bar */
 .nav-search-input {
