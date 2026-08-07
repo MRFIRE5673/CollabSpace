@@ -3,11 +3,12 @@ $current_page = basename($_SERVER['PHP_SELF']);
 $user = current_user();
 
 function nav_link(string $href, string $icon, string $label, string $current, ?string $badgeText = null, string $badgeClass = 'bg-primary'): string {
-    $active = (basename($current) === basename($href)) ? 'active' : '';
+    $is_act = (basename($current) === basename($href));
+    $activeClass = $is_act ? 'active active-tab-glow' : '';
     $badgeHtml = $badgeText ? "<span class=\"badge {$badgeClass} ms-auto nav-badge\">{$badgeText}</span>" : '';
     return "
     <li class=\"nav-item\">
-      <a href=\"{$href}\" class=\"nav-link {$active}\">
+      <a href=\"{$href}\" class=\"nav-link {$activeClass}\">
         <span class=\"active-indicator\"></span>
         <div class=\"nav-icon-wrapper\">
           <i class=\"bi {$icon}\"></i>
@@ -89,7 +90,7 @@ function nav_link(string $href, string $icon, string $label, string $current, ?s
         <!-- Collaborate Section -->
         <li class="nav-header">Collaborate</li>
         <li class="nav-item">
-          <a href="chat.php" class="nav-link <?= $current_page === 'chat.php' ? 'active' : '' ?>">
+          <a href="chat.php" class="nav-link <?= $current_page === 'chat.php' ? 'active active-tab-glow' : '' ?>">
             <span class="active-indicator"></span>
             <div class="nav-icon-wrapper">
               <i class="bi bi-chat-dots-fill"></i>
