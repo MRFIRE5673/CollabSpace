@@ -175,23 +175,36 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
   <!-- Formatted Reader Container -->
   <div id="collab-preview-container" class="<?= $is_editable ? 'd-none' : 'd-flex' ?> flex-column flex-grow-1 h-100">
     <?php if (in_array($ext, ['docx', 'doc'])): ?>
-    <!-- ── High Performance Word (.docx / .doc) Document Reader ── -->
+    <!-- ── Interactive Word (.docx / .doc) Editor & Reader ── -->
     <div class="flex-grow-1 p-3 p-md-4 overflow-auto">
-      <div class="card border-0 shadow-lg mx-auto" style="max-width:960px;border-radius:20px;background:var(--cs-surface);">
-        <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between py-3 px-4" style="border-radius:20px 20px 0 0;">
+      <div class="card border-0 shadow-lg mx-auto" style="max-width:980px;border-radius:20px;background:var(--cs-surface);">
+        <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between flex-wrap gap-2 py-3 px-4" style="border-radius:20px 20px 0 0;">
           <div class="fw-bold d-flex align-items-center gap-2">
             <i class="bi bi-file-earmark-word-fill text-primary fs-5"></i>
-            <span>Word Document Reader</span>
+            <span>Word Document Suite</span>
           </div>
-          <div class="btn-group btn-group-sm" id="docx-engine-tabs">
-            <button class="btn btn-outline-primary active" onclick="switchDocEngine('mammoth')">Native Reader</button>
-            <button class="btn btn-outline-primary" onclick="switchDocEngine('office')">Office Online</button>
-            <button class="btn btn-outline-primary" onclick="switchDocEngine('google')">Google Viewer</button>
+          <!-- Rich Text Editing Controls -->
+          <div class="d-flex align-items-center gap-1 flex-wrap">
+            <div class="btn-group btn-group-sm me-2">
+              <button class="btn btn-outline-secondary" onclick="execWordCmd('bold')" title="Bold"><i class="bi bi-type-bold"></i></button>
+              <button class="btn btn-outline-secondary" onclick="execWordCmd('italic')" title="Italic"><i class="bi bi-type-italic"></i></button>
+              <button class="btn btn-outline-secondary" onclick="execWordCmd('underline')" title="Underline"><i class="bi bi-type-underline"></i></button>
+              <button class="btn btn-outline-secondary" onclick="execWordCmd('insertUnorderedList')" title="Bullet List"><i class="bi bi-list-ul"></i></button>
+              <button class="btn btn-outline-secondary" onclick="execWordCmd('insertOrderedList')" title="Numbered List"><i class="bi bi-list-ol"></i></button>
+            </div>
+            <button class="btn btn-sm btn-primary px-3 rounded-pill" onclick="saveWordDocumentHtml()">
+              <i class="bi bi-floppy me-1"></i> Save Document
+            </button>
+            <div class="btn-group btn-group-sm ms-2" id="docx-engine-tabs">
+              <button class="btn btn-outline-primary active" onclick="switchDocEngine('mammoth')">Editor</button>
+              <button class="btn btn-outline-primary" onclick="switchDocEngine('office')">Office Online</button>
+              <button class="btn btn-outline-primary" onclick="switchDocEngine('google')">Google Viewer</button>
+            </div>
           </div>
         </div>
         <div class="card-body p-0">
           <div id="docx-mammoth-view" class="p-4 p-md-5">
-            <div id="docx-output" class="document-render-area">
+            <div id="docx-output" class="document-render-area p-3 rounded-3" contenteditable="true" style="outline:none;min-height:500px;background:var(--cs-surface);">
               <div class="text-center py-5 text-muted">
                 <div class="spinner-border text-primary spinner-border-sm mb-2"></div>
                 <div>Rendering Word Document...</div>
@@ -206,6 +219,31 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     </div>
 
     <script>
+      function execWordCmd(cmd, arg = null) {
+        document.execCommand(cmd, false, arg);
+      }
+
+      async function saveWordDocumentHtml() {
+        const output = document.getElementById('docx-output');
+        if (!output) return;
+        const htmlContent = output.innerHTML;
+        const fd = new FormData();
+        fd.append('file', '<?= urlencode($file_name) ?>');
+        fd.append('content', htmlContent);
+
+        try {
+          const res = await fetch('api/documents.php?action=save', { method: 'POST', body: fd });
+          const data = await res.json();
+          if (data.success) {
+            showToast('Word Document saved successfully!', 'success');
+          } else {
+            showToast(data.message || 'Save failed.', 'danger');
+          }
+        } catch (err) {
+          showToast('Network error while saving.', 'danger');
+        }
+      }
+
       function switchDocEngine(engine) {
         const mammothView = document.getElementById('docx-mammoth-view');
         const iframeView  = document.getElementById('docx-iframe-view');
@@ -237,10 +275,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
               <div class="text-center py-5 text-muted">
                 <i class="bi bi-file-earmark-word fs-1 opacity-25 d-block mb-2"></i>
                 <h6 class="fw-bold mb-1">Empty Document</h6>
-                <p class="small text-muted mb-3">This Word file has 0 bytes of content.</p>
-                <a href="<?= $raw_stream_src ?>" download="<?= htmlspecialchars($original_name) ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                  <i class="bi bi-download me-1"></i>Download File
-                </a>
+                <p class="small text-muted mb-3">Start typing to edit this Word file.</p>
               </div>`;
             return;
           }
@@ -251,15 +286,11 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
           if (result.value && result.value.trim().length > 0) {
             document.getElementById('docx-output').innerHTML = result.value;
           } else {
-            // If empty text, automatically switch to Office iframe
-            document.getElementById('docx-mammoth-view').classList.add('d-none');
-            document.getElementById('docx-iframe-view').classList.remove('d-none');
-            document.getElementById('docx-frame').src = 'https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>';
+            document.getElementById('docx-output').innerHTML = '<p>Start typing to edit this document...</p>';
           }
         })
         .catch(err => {
           console.warn('Mammoth render fallback:', err);
-          // Auto fallback to Office Online iframe on parse error
           document.getElementById('docx-mammoth-view').classList.add('d-none');
           document.getElementById('docx-iframe-view').classList.remove('d-none');
           document.getElementById('docx-frame').src = 'https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>';
@@ -267,12 +298,26 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     </script>
 
   <?php elseif (in_array($ext, ['xlsx', 'xls', 'csv'])): ?>
-    <!-- ── Excel & CSV Spreadsheet Viewer (SheetJS) ── -->
+    <!-- ── Interactive Excel & CSV Spreadsheet Editor (SheetJS) ── -->
     <div class="flex-grow-1 p-4 overflow-auto">
-      <div class="card border-0 shadow-lg mx-auto" style="max-width:1100px;border-radius:20px;background:var(--cs-surface);">
-        <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between py-3 px-4" style="border-radius:20px 20px 0 0;">
-          <div class="fw-bold"><i class="bi bi-file-earmark-excel-fill text-success me-2 fs-5"></i>Spreadsheet Reader</div>
-          <div id="excel-sheet-tabs" class="btn-group btn-group-sm"></div>
+      <div class="card border-0 shadow-lg mx-auto" style="max-width:1150px;border-radius:20px;background:var(--cs-surface);">
+        <div class="card-header bg-body-tertiary d-flex align-items-center justify-content-between flex-wrap gap-2 py-3 px-4" style="border-radius:20px 20px 0 0;">
+          <div class="fw-bold d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-excel-fill text-success fs-5"></i>
+            <span>Interactive Spreadsheet Suite</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <div id="excel-sheet-tabs" class="btn-group btn-group-sm me-2"></div>
+            <button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="addExcelRow()">
+              <i class="bi bi-plus-lg me-1"></i>Add Row
+            </button>
+            <button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="addExcelCol()">
+              <i class="bi bi-plus-lg me-1"></i>Add Col
+            </button>
+            <button class="btn btn-sm btn-success rounded-pill px-3" onclick="saveExcelSpreadsheet()">
+              <i class="bi bi-floppy me-1"></i> Save Sheet
+            </button>
+          </div>
         </div>
         <div class="card-body p-4 overflow-auto">
           <div id="excel-output">
@@ -286,33 +331,84 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     </div>
 
     <script>
+      let currentWorkbook = null;
+
+      function addExcelRow() {
+        const table = document.querySelector('#excel-output table');
+        if (!table) return;
+        const cols = table.rows[0] ? table.rows[0].cells.length : 3;
+        const newRow = table.insertRow();
+        for (let i = 0; i < cols; i++) {
+          const cell = newRow.insertCell();
+          cell.contentEditable = 'true';
+          cell.innerHTML = '&nbsp;';
+        }
+      }
+
+      function addExcelCol() {
+        const table = document.querySelector('#excel-output table');
+        if (!table) return;
+        for (let r = 0; r < table.rows.length; r++) {
+          const cell = table.rows[r].insertCell();
+          cell.contentEditable = 'true';
+          cell.innerHTML = '&nbsp;';
+        }
+      }
+
+      async function saveExcelSpreadsheet() {
+        const table = document.querySelector('#excel-output table');
+        if (!table) return;
+        const wb = XLSX.utils.table_to_book(table);
+        const csvContent = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
+        
+        const fd = new FormData();
+        fd.append('file', '<?= urlencode($file_name) ?>');
+        fd.append('content', csvContent);
+
+        try {
+          const res = await fetch('api/documents.php?action=save', { method: 'POST', body: fd });
+          const data = await res.json();
+          if (data.success) {
+            showToast('Spreadsheet saved successfully!', 'success');
+          } else {
+            showToast(data.message || 'Save failed.', 'danger');
+          }
+        } catch (err) {
+          showToast('Network error while saving spreadsheet.', 'danger');
+        }
+      }
+
       fetch('<?= $raw_stream_src ?>')
         .then(r => r.arrayBuffer())
         .then(arrayBuffer => {
-          const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+          currentWorkbook = XLSX.read(arrayBuffer, { type: 'array' });
           const output = document.getElementById('excel-output');
           const tabs = document.getElementById('excel-sheet-tabs');
           
-          if (!workbook.SheetNames || !workbook.SheetNames.length) {
+          if (!currentWorkbook.SheetNames || !currentWorkbook.SheetNames.length) {
             output.innerHTML = '<div class="text-muted text-center py-4">No sheets found in spreadsheet.</div>';
             return;
           }
 
           function renderSheet(name) {
-            const worksheet = workbook.Sheets[name];
+            const worksheet = currentWorkbook.Sheets[name];
             const html = XLSX.utils.sheet_to_html(worksheet, { header: '', footer: '' });
             output.innerHTML = html;
             const table = output.querySelector('table');
             if (table) {
               table.className = 'table table-bordered table-striped table-hover small m-0';
+              table.querySelectorAll('td, th').forEach(cell => {
+                cell.contentEditable = 'true';
+                cell.style.outline = 'none';
+              });
             }
           }
 
-          tabs.innerHTML = workbook.SheetNames.map((name, i) => `
+          tabs.innerHTML = currentWorkbook.SheetNames.map((name, i) => `
             <button class="btn btn-outline-success btn-sm ${i===0?'active':''}" onclick="renderSheet('${name}'); document.querySelectorAll('#excel-sheet-tabs .btn').forEach(b=>b.classList.remove('active')); this.classList.add('active');">${name}</button>
           `).join('');
 
-          renderSheet(workbook.SheetNames[0]);
+          renderSheet(currentWorkbook.SheetNames[0]);
         })
         .catch(err => {
           document.getElementById('excel-output').innerHTML = `<div class="alert alert-warning text-center">Unable to parse spreadsheet.</div>`;
@@ -365,18 +461,46 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
       </div>
     </div>
 
-  <?php elseif (in_array($ext, ['doc','ppt','pptx'])): ?>
-    <!-- ── Office & Google Docs Embedded Viewer ── -->
-    <div class="flex-grow-1 d-flex flex-column h-100">
-      <div class="bg-body-tertiary px-4 py-2 border-bottom d-flex align-items-center justify-content-between">
-        <span class="small text-muted"><i class="bi bi-file-earmark-slides me-1"></i>Document Reader Service</span>
-        <div class="btn-group btn-group-sm">
-          <button class="btn btn-outline-primary active" onclick="document.getElementById('viewer-iframe').src='https://docs.google.com/viewer?url=<?= urlencode($raw_file_url) ?>&embedded=true'">Google Reader</button>
-          <button class="btn btn-outline-primary" onclick="document.getElementById('viewer-iframe').src='https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>'">Office Reader</button>
+  <?php elseif (in_array($ext, ['ppt','pptx'])): ?>
+    <!-- ── PowerPoint Presentation Suite & Cloud Presenter ── -->
+    <div class="flex-grow-1 d-flex flex-column h-100 position-relative">
+      <div class="bg-body-tertiary px-4 py-2 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <span class="fw-semibold small text-primary"><i class="bi bi-file-earmark-slides-fill me-2 fs-5"></i>PowerPoint Presentation Deck</span>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="togglePptFullscreen()">
+            <i class="bi bi-arrows-fullscreen me-1"></i> Present Fullscreen
+          </button>
+          <div class="btn-group btn-group-sm" id="ppt-engine-tabs">
+            <button class="btn btn-outline-primary active" onclick="switchPptEngine('google')">Google Slides Reader</button>
+            <button class="btn btn-outline-primary" onclick="switchPptEngine('office')">Office Online Reader</button>
+          </div>
         </div>
       </div>
       <iframe id="viewer-iframe" src="https://docs.google.com/viewer?url=<?= urlencode($raw_file_url) ?>&embedded=true" class="w-100 h-100 border-0"></iframe>
     </div>
+
+    <script>
+      function switchPptEngine(engine) {
+        const frame = document.getElementById('viewer-iframe');
+        document.querySelectorAll('#ppt-engine-tabs .btn').forEach(b => b.classList.remove('active'));
+        if (engine === 'google') {
+          frame.src = 'https://docs.google.com/viewer?url=<?= urlencode($raw_file_url) ?>&embedded=true';
+          event.target.classList.add('active');
+        } else if (engine === 'office') {
+          frame.src = 'https://view.officeapps.live.com/op/embed.aspx?src=<?= urlencode($raw_file_url) ?>';
+          event.target.classList.add('active');
+        }
+      }
+
+      function togglePptFullscreen() {
+        const frame = document.getElementById('viewer-iframe');
+        if (frame.requestFullscreen) {
+          frame.requestFullscreen();
+        } else if (frame.webkitRequestFullscreen) {
+          frame.webkitRequestFullscreen();
+        }
+      }
+    </script>
 
   <?php elseif (in_array($ext, ['txt','json','html','css','js','php','sql','py','c','cpp','h','java','cs','sh','bat','env','yaml','yml','xml','log'])): ?>
     <!-- ── Text / Code Viewer ── -->
