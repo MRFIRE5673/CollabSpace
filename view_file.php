@@ -224,24 +224,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
       }
 
       async function saveWordDocumentHtml() {
-        const output = document.getElementById('docx-output');
-        if (!output) return;
-        const htmlContent = output.innerHTML;
-        const fd = new FormData();
-        fd.append('file', fileName);
-        fd.append('content', htmlContent);
-
-        try {
-          const res = await fetch('api/documents.php?action=save', { method: 'POST', body: fd });
-          const data = await res.json();
-          if (data.success) {
-            showToast('Word Document saved successfully!', 'success');
-          } else {
-            showToast(data.message || 'Save failed.', 'danger');
-          }
-        } catch (err) {
-          showToast('Network error while saving.', 'danger');
-        }
+        await saveDocumentContent(true);
       }
 
       function switchDocEngine(engine) {
@@ -356,26 +339,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
       }
 
       async function saveExcelSpreadsheet() {
-        const table = document.querySelector('#excel-output table');
-        if (!table) return;
-        const wb = XLSX.utils.table_to_book(table);
-        const csvContent = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]]);
-        
-        const fd = new FormData();
-        fd.append('file', fileName);
-        fd.append('content', csvContent);
-
-        try {
-          const res = await fetch('api/documents.php?action=save', { method: 'POST', body: fd });
-          const data = await res.json();
-          if (data.success) {
-            showToast('Spreadsheet saved successfully!', 'success');
-          } else {
-            showToast(data.message || 'Save failed.', 'danger');
-          }
-        } catch (err) {
-          showToast('Network error while saving spreadsheet.', 'danger');
-        }
+        await saveDocumentContent(true);
       }
 
       fetch('<?= $raw_stream_src ?>')
@@ -566,6 +530,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
   let isUserTyping = false;
   let autoSaveTimer = null;
   const fileName = <?= json_encode($file_name) ?>;
+  const fileId   = <?= (int)($file_rec['id'] ?? 0) ?>;
 
   function toggleCollabView(mode) {
     const editorWrap  = document.getElementById('collab-editor-container');
@@ -586,22 +551,6 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
       btnEdit.classList.remove('active');
       btnPrev.classList.add('active');
     }
-  }
-
-  const liveEditor = document.getElementById('live-doc-editor');
-  if (liveEditor) {
-    liveEditor.addEventListener('input', function() {
-      isUserTyping = true;
-      updateSyncStatus('⚡ Typing changes...', 'warning');
-      clearTimeout(autoSaveTimer);
-      autoSaveTimer = setTimeout(() => {
-        saveDocumentContent(false);
-      }, 600);
-    });
-
-    liveEditor.addEventListener('blur', function() {
-      isUserTyping = false;
-    });
   }
 
   function updateSyncStatus(text, type='success') {
@@ -659,34 +608,8 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(() => {
       saveDocumentContent(false);
-    }, 200);
+    }, 400);
   }
-
-  const liveEditor = document.getElementById('live-doc-editor');
-  if (liveEditor) {
-    liveEditor.addEventListener('input', triggerAutoSave);
-    liveEditor.addEventListener('blur', function() {
-      isUserTyping = false;
-      saveDocumentContent(false);
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    const docxOutput = document.getElementById('docx-output');
-    if (docxOutput) {
-      docxOutput.addEventListener('input', triggerAutoSave);
-      docxOutput.addEventListener('keyup', triggerAutoSave);
-      docxOutput.addEventListener('blur', () => {
-        isUserTyping = false;
-        saveDocumentContent(false);
-      });
-    }
-
-    const excelOutput = document.getElementById('excel-output');
-    if (excelOutput) {
-      excelOutput.addEventListener('input', triggerAutoSave);
-    }
-  });
 
   async function saveDocumentContent(isManual = false) {
     const content = getCurrentEditorContent();
@@ -695,6 +618,7 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
 
     const fd = new FormData();
     fd.append('file', fileName);
+    fd.append('file_id', fileId);
     fd.append('content', content);
 
     try {
@@ -730,7 +654,39 @@ $is_editable = in_array($ext, ['txt','md','json','csv','tsv','html','htm','css',
     } catch (err) {}
   }
 
-  setInterval(pollDocumentSync, 800);
+  const liveEditor = document.getElementById('live-doc-editor');
+  if (liveEditor) {
+    liveEditor.addEventListener('input', triggerAutoSave);
+    liveEditor.addEventListener('keyup', triggerAutoSave);
+    liveEditor.addEventListener('blur', function() {
+      isUserTyping = false;
+      saveDocumentContent(false);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const docxOutput = document.getElementById('docx-output');
+    if (docxOutput) {
+      docxOutput.addEventListener('input', triggerAutoSave);
+      docxOutput.addEventListener('keyup', triggerAutoSave);
+      docxOutput.addEventListener('blur', () => {
+        isUserTyping = false;
+        saveDocumentContent(false);
+      });
+    }
+
+    const excelOutput = document.getElementById('excel-output');
+    if (excelOutput) {
+      excelOutput.addEventListener('input', triggerAutoSave);
+      excelOutput.addEventListener('keyup', triggerAutoSave);
+      excelOutput.addEventListener('blur', () => {
+        isUserTyping = false;
+        saveDocumentContent(false);
+      });
+    }
+  });
+
+  setInterval(pollDocumentSync, 1000);
 
   function promptRenameFile(id, oldName) {
     const newName = prompt('Enter new filename:', oldName);

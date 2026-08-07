@@ -83,7 +83,11 @@ switch ($action) {
         $mtime = filemtime($filePath);
 
         // Update database record if file exists in files table
-        $db->prepare("UPDATE files SET file_size=?, uploaded_at=NOW() WHERE file_name=?")->execute([$bytes, $fname]);
+        if ($fid) {
+            $db->prepare("UPDATE files SET file_size=?, uploaded_at=NOW() WHERE id=? OR file_name=?")->execute([$bytes, $fid, $fname]);
+        } else {
+            $db->prepare("UPDATE files SET file_size=?, uploaded_at=NOW() WHERE file_name=?")->execute([$bytes, $fname]);
+        }
 
         // Register user collaboration ping
         try {
