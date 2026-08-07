@@ -237,24 +237,38 @@ html body .app-sidebar .nav-link {
 }
 
 /* Guaranteed Active Tab Glow Styling */
-.app-sidebar .nav-link.active-tab-glow,
-.app-sidebar .sidebar-menu .nav-item .nav-link.active-tab-glow,
-.app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active-tab-glow {
+html body .app-sidebar .nav-link.active,
+html body .app-sidebar .nav-link.active-tab-glow,
+html body .app-sidebar .sidebar-menu .nav-item .nav-link.active,
+html body .app-sidebar .sidebar-menu .nav-item .nav-link.active-tab-glow,
+html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active,
+html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active-tab-glow {
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
   background-color: #4f46e5 !important;
   color: #ffffff !important;
   font-weight: 600 !important;
   border-color: transparent !important;
-  box-shadow: 0 6px 20px -2px rgba(99, 102, 241, 0.55) !important;
+  box-shadow: 0 6px 24px -2px rgba(99, 102, 241, 0.55) !important;
   transform: none !important;
 }
 
-.app-sidebar .nav-link.active-tab-glow .nav-icon-wrapper {
+html body .app-sidebar .nav-link.active *,
+html body .app-sidebar .nav-link.active-tab-glow *,
+html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active *,
+html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active-tab-glow * {
+  color: #ffffff !important;
+}
+
+html body .app-sidebar .nav-link.active .nav-icon-wrapper,
+html body .app-sidebar .nav-link.active-tab-glow .nav-icon-wrapper,
+html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active .nav-icon-wrapper,
+html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active-tab-glow .nav-icon-wrapper {
   background: rgba(255, 255, 255, 0.25) !important;
   color: #ffffff !important;
 }
 
-.app-sidebar .nav-link.active-tab-glow .active-indicator {
+html body .app-sidebar .nav-link.active .active-indicator,
+html body .app-sidebar .nav-link.active-tab-glow .active-indicator {
   opacity: 1 !important;
   background: #ffffff !important;
 }
@@ -270,9 +284,6 @@ html body .app-sidebar .nav-link {
   background: #ffffff;
   opacity: 0;
   transition: opacity 0.2s ease;
-}
-html body .app-sidebar .nav-link.active .active-indicator {
-  opacity: 1;
 }
 
 .nav-icon-wrapper {
@@ -324,28 +335,6 @@ html body .app-sidebar .nav-link:hover .nav-icon-wrapper i {
   color: #4f46e5 !important;
 }
 
-/* Light Mode Active Nav Item */
-[data-bs-theme="light"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active,
-[data-bs-theme="light"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active-tab-glow,
-[data-bs-theme="light"] html body .app-sidebar .nav-link.active,
-[data-bs-theme="light"] html body .app-sidebar .nav-link.active-tab-glow {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-  background-color: #4f46e5 !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-  border-color: transparent !important;
-  box-shadow: 0 6px 20px -2px rgba(99, 102, 241, 0.45) !important;
-  transform: none !important;
-}
-
-[data-bs-theme="light"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active .nav-icon-wrapper,
-[data-bs-theme="light"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active-tab-glow .nav-icon-wrapper,
-[data-bs-theme="light"] html body .app-sidebar .nav-link.active .nav-icon-wrapper,
-[data-bs-theme="light"] html body .app-sidebar .nav-link.active-tab-glow .nav-icon-wrapper {
-  background: rgba(255, 255, 255, 0.22) !important;
-  color: #ffffff !important;
-}
-
 /* Dark Mode Inactive Nav Items */
 [data-bs-theme="dark"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link:not(.active):not(.active-tab-glow),
 [data-bs-theme="dark"] html body .app-sidebar .nav-link:not(.active):not(.active-tab-glow) {
@@ -372,28 +361,6 @@ html body .app-sidebar .nav-link:hover .nav-icon-wrapper i {
 [data-bs-theme="dark"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link:not(.active):not(.active-tab-glow):hover .nav-icon-wrapper,
 [data-bs-theme="dark"] html body .app-sidebar .nav-link:not(.active):not(.active-tab-glow):hover .nav-icon-wrapper {
   background: rgba(255, 255, 255, 0.16) !important;
-  color: #ffffff !important;
-}
-
-/* Dark Mode Active Nav Item */
-[data-bs-theme="dark"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active,
-[data-bs-theme="dark"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active-tab-glow,
-[data-bs-theme="dark"] html body .app-sidebar .nav-link.active,
-[data-bs-theme="dark"] html body .app-sidebar .nav-link.active-tab-glow {
-  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
-  background-color: #4f46e5 !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
-  border-color: transparent !important;
-  box-shadow: 0 6px 24px -2px rgba(99, 102, 241, 0.55) !important;
-  transform: none !important;
-}
-
-[data-bs-theme="dark"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active .nav-icon-wrapper,
-[data-bs-theme="dark"] html body .app-sidebar .sidebar-wrapper .sidebar-menu > .nav-item > .nav-link.active-tab-glow .nav-icon-wrapper,
-[data-bs-theme="dark"] html body .app-sidebar .nav-link.active .nav-icon-wrapper,
-[data-bs-theme="dark"] html body .app-sidebar .nav-link.active-tab-glow .nav-icon-wrapper {
-  background: rgba(255, 255, 255, 0.22) !important;
   color: #ffffff !important;
 }
 
