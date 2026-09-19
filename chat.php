@@ -7,26 +7,29 @@ $user = current_user();
 $uid  = $user['id'];
 $db   = getDB();
 
-// Fetch user's assigned project rooms (only projects the user belongs to)
+$cid = active_company_id();
+
+// Fetch user's assigned project rooms (only projects the user belongs to in active company)
 $stmt = $db->prepare("
     SELECT DISTINCT p.id, p.name
     FROM projects p
     LEFT JOIN project_members pm ON pm.project_id = p.id
-    WHERE p.created_by = ? OR p.manager_id = ? OR pm.user_id = ?
+    WHERE p.company_id = ? AND (p.created_by = ? OR p.manager_id = ? OR pm.user_id = ?)
     ORDER BY p.name
 ");
-$stmt->execute([$uid, $uid, $uid]);
+$stmt->execute([$cid, $uid, $uid, $uid]);
 $projects = $stmt->fetchAll();
 
-// Fetch user's added contacts (Direct Messages)
+// Fetch user's added contacts (Direct Messages within company)
 $stmt = $db->prepare("
     SELECT u.id, u.name, u.email, u.status, u.avatar
     FROM user_contacts uc
     JOIN users u ON u.id = uc.contact_id
-    WHERE uc.user_id = ? AND u.is_active = 1
+    JOIN company_members cm ON cm.user_id = u.id
+    WHERE uc.user_id = ? AND cm.company_id = ? AND cm.is_active = 1 AND u.is_active = 1
     ORDER BY u.status DESC, u.name ASC
 ");
-$stmt->execute([$uid]);
+$stmt->execute([$uid, $cid]);
 $dm_contacts = $stmt->fetchAll();
 
 // Active room setup
@@ -35,7 +38,7 @@ $room_id     = (int)($_GET['id'] ?? ($projects[0]['id'] ?? ($dm_contacts[0]['id'
 $room_name   = 'General';
 
 if ($room_type === 'project' && $room_id) {
-    $r = $db->prepare("SELECT name FROM projects WHERE id=?"); $r->execute([$room_id]);
+    $r = $db->prepare("SELECT name FROM projects WHERE id=? AND company_id=?"); $r->execute([$room_id, $cid]);
     $room_name = $r->fetchColumn() ?: 'Project Chat';
 } elseif ($room_type === 'direct' && $room_id) {
     $r = $db->prepare("SELECT name FROM users WHERE id=?"); $r->execute([$room_id]);
@@ -48,20 +51,20 @@ if ($room_type === 'direct' && $room_id) {
         SELECT c.*, u.name AS sender_name, u.avatar AS sender_avatar,
                (c.sender_id=?) AS is_mine
         FROM chats c JOIN users u ON u.id=c.sender_id
-        WHERE c.room_type='direct'
+        WHERE c.company_id=? AND c.room_type='direct'
           AND ((c.sender_id=? AND c.receiver_id=?) OR (c.sender_id=? AND c.receiver_id=?))
         ORDER BY c.created_at ASC LIMIT 100
     ");
-    $stmt->execute([$uid, $uid, $room_id, $room_id, $uid]);
+    $stmt->execute([$uid, $cid, $uid, $room_id, $room_id, $uid]);
 } else {
     $stmt = $db->prepare("
         SELECT c.*, u.name AS sender_name, u.avatar AS sender_avatar,
                (c.sender_id=?) AS is_mine
         FROM chats c JOIN users u ON u.id=c.sender_id
-        WHERE c.project_id=? AND c.room_type='project'
+        WHERE c.company_id=? AND c.project_id=? AND c.room_type='project'
         ORDER BY c.created_at ASC LIMIT 100
     ");
-    $stmt->execute([$uid, $room_id]);
+    $stmt->execute([$uid, $cid, $room_id]);
 }
 $messages = $stmt->fetchAll();
 $last_id = empty($messages) ? 0 : max(array_column($messages, 'id'));
@@ -190,11 +193,8 @@ include __DIR__ . '/includes/header.php';
             <?php endif; ?>
             <?php if ($m['file_path']): ?>
             <div class="chat-attachment d-flex align-items-center gap-2 mt-1">
-              <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" download="<?= htmlspecialchars($m['file_name'] ?? $m['file_path']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
-                <i class="bi bi-download me-1"></i><?= htmlspecialchars($m['file_name'] ?? 'Download') ?>
-              </a>
-              <a href="raw_file.php?chat=1&file=<?= urlencode($m['file_path']) ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.75rem;">
-                <i class="bi bi-eye me-1"></i>View
+              <a href="view_file.php?file=<?= urlencode($m['file_path']) ?>" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+                <i class="bi bi-eye me-1"></i>View Preview (<?= htmlspecialchars($m['file_name'] ?? 'File') ?>)
               </a>
             </div>
             <?php endif; ?>
@@ -429,11 +429,8 @@ function appendMessageUI(m) {
     const imgThumb = isImg ? `<div class="mt-2 mb-1"><a href="view_file.php?file=${encodeURIComponent(m.file_path)}"><img src="${fileUrl}" class="img-fluid rounded-3 shadow-sm" style="max-height:200px;max-width:100%;object-fit:cover;" onerror="this.style.display='none';" /></a></div>` : '';
 
     fileHtml = `${imgThumb}<div class="chat-attachment d-flex align-items-center gap-2 mt-1 p-2 rounded-3" style="${isMine ? 'background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.25);' : 'background:var(--cs-bg);border:1px solid var(--cs-border);'}">
-      <a href="${fileUrl}" download="${escapeHtml(m.file_name || m.file_path)}" class="btn btn-sm ${isMine ? 'btn-light text-primary fw-semibold' : 'btn-primary'} py-1 px-2" style="font-size:.78rem;">
-        <i class="bi bi-download me-1"></i>${escapeHtml(m.file_name || 'Download')}
-      </a>
-      <a href="view_file.php?file=${encodeURIComponent(m.file_path)}" class="btn btn-sm ${isMine ? 'btn-outline-light' : 'btn-outline-secondary'} py-1 px-2" style="font-size:.78rem;">
-        <i class="bi bi-eye me-1"></i>View
+      <a href="view_file.php?file=${encodeURIComponent(m.file_path)}" class="btn btn-sm ${isMine ? 'btn-light text-primary fw-semibold' : 'btn-primary'} py-1 px-2" style="font-size:.78rem;">
+        <i class="bi bi-eye me-1"></i>View Preview (${escapeHtml(m.file_name || 'File')})
       </a>
     </div>`;
   }

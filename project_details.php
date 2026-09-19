@@ -5,28 +5,29 @@ require_once __DIR__ . '/includes/auth.php';
 require_login();
 $user = current_user();
 $uid  = $user['id'];
+$cid  = active_company_id();
 $db   = getDB();
 
 $project_id = (int)($_GET['id'] ?? 0);
 if (!$project_id) { header('Location: projects.php'); exit; }
 
-// Fetch project
-$proj = $db->prepare("SELECT p.*, u.name AS manager_name FROM projects p JOIN users u ON u.id=p.manager_id WHERE p.id=?");
-$proj->execute([$project_id]);
-$proj = $proj->fetch();
+// Fetch project (Tenant Guard)
+$proj_stmt = $db->prepare("SELECT p.*, u.name AS manager_name FROM projects p JOIN users u ON u.id = p.manager_id WHERE p.id = ? AND p.company_id = ?");
+$proj_stmt->execute([$project_id, $cid]);
+$proj = $proj_stmt->fetch();
 if (!$proj) { header('Location: projects.php'); exit; }
 
 $page_title = htmlspecialchars($proj['name']);
 
 // Fetch tasks grouped by status
-$tasks = $db->prepare("
+$tasks_stmt = $db->prepare("
     SELECT t.*, u.name AS assignee_name, u.avatar AS assignee_avatar
-    FROM tasks t LEFT JOIN users u ON u.id=t.assigned_to
-    WHERE t.project_id=?
+    FROM tasks t LEFT JOIN users u ON u.id = t.assigned_to
+    WHERE t.project_id = ? AND t.company_id = ?
     ORDER BY t.position ASC, t.created_at DESC
 ");
-$tasks->execute([$project_id]);
-$tasks = $tasks->fetchAll();
+$tasks_stmt->execute([$project_id, $cid]);
+$tasks = $tasks_stmt->fetchAll();
 
 $kanban_cols = ['todo'=>[],'in_progress'=>[],'in_review'=>[],'done'=>[]];
 foreach ($tasks as $t) {
@@ -34,37 +35,39 @@ foreach ($tasks as $t) {
 }
 
 // Project members
-$members = $db->prepare("
+$members_stmt = $db->prepare("
     SELECT u.id, u.name, u.role, u.avatar, u.status
-    FROM project_members pm JOIN users u ON u.id=pm.user_id
-    WHERE pm.project_id=?
+    FROM project_members pm JOIN users u ON u.id = pm.user_id
+    WHERE pm.project_id = ? AND pm.company_id = ?
     ORDER BY u.name
 ");
-$members->execute([$project_id]);
-$members = $members->fetchAll();
+$members_stmt->execute([$project_id, $cid]);
+$members = $members_stmt->fetchAll();
 
 // Files
-$files = $db->prepare("
+$files_stmt = $db->prepare("
     SELECT f.*, u.name AS uploader_name
-    FROM files f JOIN users u ON u.id=f.uploaded_by
-    WHERE f.project_id=?
+    FROM files f JOIN users u ON u.id = f.uploaded_by
+    WHERE f.project_id = ? AND f.company_id = ?
     ORDER BY f.uploaded_at DESC LIMIT 20
 ");
-$files->execute([$project_id]);
-$files = $files->fetchAll();
+$files_stmt->execute([$project_id, $cid]);
+$files = $files_stmt->fetchAll();
 
 // Recent activity
-$activity = $db->prepare("
+$act_stmt = $db->prepare("
     SELECT a.*, u.name AS user_name
-    FROM activity_logs a JOIN users u ON u.id=a.user_id
-    WHERE a.project_id=?
+    FROM activity_logs a JOIN users u ON u.id = a.user_id
+    WHERE a.project_id = ? AND a.company_id = ?
     ORDER BY a.created_at DESC LIMIT 15
 ");
-$activity->execute([$project_id]);
-$activity = $activity->fetchAll();
+$act_stmt->execute([$project_id, $cid]);
+$activity = $act_stmt->fetchAll();
 
-// All users for task assignment
-$all_users = $db->query("SELECT id, name FROM users WHERE is_active=1 ORDER BY name")->fetchAll();
+// Company users for task assignment dropdown
+$au_stmt = $db->prepare("SELECT id, name FROM users WHERE company_id = ? AND is_active = 1 ORDER BY name");
+$au_stmt->execute([$cid]);
+$all_users = $au_stmt->fetchAll();
 
 // Active tab
 $active_tab = $_GET['tab'] ?? 'board';

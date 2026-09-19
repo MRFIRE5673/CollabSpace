@@ -5,17 +5,18 @@ require_once __DIR__ . '/includes/auth.php';
 require_login();
 $user = current_user();
 $uid  = $user['id'];
+$cid  = active_company_id();
 $db   = getDB();
 
 // Handle Delete via Form fallback
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_file'])) {
     $fid = (int)$_POST['delete_file'];
-    $stmt = $db->prepare("SELECT * FROM files WHERE id=?");
-    $stmt->execute([$fid]);
+    $stmt = $db->prepare("SELECT * FROM files WHERE id = ? AND company_id = ?");
+    $stmt->execute([$fid, $cid]);
     $f = $stmt->fetch();
     if ($f && (is_admin() || $f['uploaded_by'] == $uid)) {
-        @unlink(UPLOAD_DIR . $f['file_name']);
-        $db->prepare("DELETE FROM files WHERE id=?")->execute([$fid]);
+        @unlink(PRIVATE_STORAGE_DIR . $cid . '/' . $f['file_name']);
+        $db->prepare("DELETE FROM files WHERE id = ? AND company_id = ?")->execute([$fid, $cid]);
     }
     header('Location: files.php');
     exit;
@@ -25,13 +26,13 @@ $project_filter = (int)($_GET['project_id'] ?? 0);
 $type_filter    = $_GET['type'] ?? '';
 $search         = trim($_GET['q'] ?? '');
 
-$where  = '1=1';
-$params = [];
+$where  = 'f.company_id = ?';
+$params = [$cid];
 if (!is_admin()) {
-    $where .= ' AND (f.uploaded_by=? OR f.project_id IN (SELECT id FROM projects WHERE manager_id=? OR created_by=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?)))';
-    $params[] = $uid; $params[] = $uid; $params[] = $uid; $params[] = $uid;
+    $where .= ' AND (f.uploaded_by = ? OR f.project_id IN (SELECT id FROM projects WHERE company_id = ? AND (manager_id = ? OR created_by = ? OR id IN (SELECT project_id FROM project_members WHERE user_id = ? AND company_id = ?))))';
+    $params[] = $uid; $params[] = $cid; $params[] = $uid; $params[] = $uid; $params[] = $uid; $params[] = $cid;
 }
-if ($project_filter) { $where .= ' AND f.project_id=?'; $params[] = $project_filter; }
+if ($project_filter) { $where .= ' AND f.project_id = ?'; $params[] = $project_filter; }
 if ($search) { $where .= ' AND f.original_name LIKE ?'; $params[] = "%$search%"; }
 
 if ($type_filter) {
@@ -51,20 +52,27 @@ if ($type_filter) {
 $stmt = $db->prepare("
     SELECT f.*, u.name AS uploader_name, p.name AS project_name
     FROM files f
-    JOIN users u ON u.id=f.uploaded_by
-    LEFT JOIN projects p ON p.id=f.project_id
+    JOIN users u ON u.id = f.uploaded_by
+    LEFT JOIN projects p ON p.id = f.project_id
     WHERE $where
     ORDER BY f.uploaded_at DESC
 ");
 $stmt->execute($params);
 $files = $stmt->fetchAll();
 
-$projects_list = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
+$projects_stmt = $db->prepare("SELECT id, name FROM projects WHERE company_id = ? ORDER BY name");
+$projects_stmt->execute([$cid]);
+$projects_list = $projects_stmt->fetchAll();
 
 // Storage statistics
-$total_size = (float)($db->query("SELECT COALESCE(SUM(file_size),0) FROM files")->fetchColumn());
-$total_files = (int)($db->query("SELECT COUNT(*) FROM files")->fetchColumn());
-$max_storage = 500 * 1024 * 1024; // 500 MB limit
+$ts_stmt = $db->prepare("SELECT COALESCE(SUM(file_size),0) FROM files WHERE company_id = ?");
+$ts_stmt->execute([$cid]);
+$total_size = (float)$ts_stmt->fetchColumn();
+
+$tf_stmt = $db->prepare("SELECT COUNT(*) FROM files WHERE company_id = ?");
+$tf_stmt->execute([$cid]);
+$total_files = (int)$tf_stmt->fetchColumn();
+$max_storage = 500 * 1024 * 1024;
 $storage_pct = $max_storage > 0 ? min(100, round(($total_size / $max_storage) * 100)) : 0;
 
 function format_file_size($bytes) {
@@ -208,9 +216,7 @@ include __DIR__ . '/includes/header.php';
           <div class="dropdown">
             <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical fs-5"></i></button>
             <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="border-radius:12px;">
-              <li><a class="dropdown-item py-2" href="view_file.php?id=<?= $f['id'] ?>"><i class="bi bi-eye me-2 text-primary"></i>Open in Browser</a></li>
-              <li><a class="dropdown-item py-2" href="<?= $fileUrl ?>" download="<?= htmlspecialchars($f['original_name']) ?>"><i class="bi bi-download me-2 text-success"></i>Download File</a></li>
-              <li><button class="dropdown-item py-2" onclick="copyShareLink('<?= $fileUrl ?>')"><i class="bi bi-link-45deg me-2 text-info"></i>Copy Share Link</button></li>
+              <li><a class="dropdown-item py-2" href="view_file.php?id=<?= $f['id'] ?>"><i class="bi bi-eye me-2 text-primary"></i>Open Preview</a></li>
               <?php if (is_admin() || $f['uploaded_by'] == $uid): ?>
               <li><button class="dropdown-item py-2" onclick="renameFileAjax(<?= $f['id'] ?>, '<?= htmlspecialchars($f['original_name'], ENT_QUOTES) ?>')"><i class="bi bi-pencil-square me-2 text-warning"></i>Rename File</button></li>
               <li><hr class="dropdown-divider"></li>

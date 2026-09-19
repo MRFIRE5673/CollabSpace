@@ -10,59 +10,83 @@ if (!is_manager()) {
 
 $user = current_user();
 $uid  = $user['id'];
+$cid  = active_company_id();
 $db   = getDB();
 
-// ── Stats ──────────────────────────────────────────────────
-$total_projects  = (int)$db->query("SELECT COUNT(*) FROM projects")->fetchColumn();
-$active_projects = (int)$db->query("SELECT COUNT(*) FROM projects WHERE status='active'")->fetchColumn();
-$on_hold         = (int)$db->query("SELECT COUNT(*) FROM projects WHERE status='on_hold'")->fetchColumn();
-$total_tasks     = (int)$db->query("SELECT COUNT(*) FROM tasks")->fetchColumn();
-$done_tasks      = (int)$db->query("SELECT COUNT(*) FROM tasks WHERE status='done'")->fetchColumn();
-$pending_tasks   = (int)$db->query("SELECT COUNT(*) FROM tasks WHERE status!='done'")->fetchColumn();
-$total_members   = (int)$db->query("SELECT COUNT(*) FROM users WHERE is_active=1 AND role IN ('member','manager')")->fetchColumn();
+// ── Stats (Company Scoped) ──────────────────────────────────
+$p_stmt = $db->prepare("SELECT COUNT(*) FROM projects WHERE company_id = ?"); $p_stmt->execute([$cid]);
+$total_projects  = (int)$p_stmt->fetchColumn();
+
+$ap_stmt = $db->prepare("SELECT COUNT(*) FROM projects WHERE company_id = ? AND status = 'active'"); $ap_stmt->execute([$cid]);
+$active_projects = (int)$ap_stmt->fetchColumn();
+
+$oh_stmt = $db->prepare("SELECT COUNT(*) FROM projects WHERE company_id = ? AND status = 'on_hold'"); $oh_stmt->execute([$cid]);
+$on_hold         = (int)$oh_stmt->fetchColumn();
+
+$t_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ?"); $t_stmt->execute([$cid]);
+$total_tasks     = (int)$t_stmt->fetchColumn();
+
+$dt_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ? AND status = 'done'"); $dt_stmt->execute([$cid]);
+$done_tasks      = (int)$dt_stmt->fetchColumn();
+
+$pt_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ? AND status != 'done'"); $pt_stmt->execute([$cid]);
+$pending_tasks   = (int)$pt_stmt->fetchColumn();
+
+$tm_stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id = ? AND is_active = 1 AND role IN ('member','manager','project_manager','team_lead')"); $tm_stmt->execute([$cid]);
+$total_members   = (int)$tm_stmt->fetchColumn();
 $completion_pct  = $total_tasks > 0 ? round(($done_tasks / $total_tasks) * 100) : 0;
-$online_count    = (int)$db->query("SELECT COUNT(*) FROM users WHERE status='online' AND is_active=1")->fetchColumn();
+
+$ou_stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id = ? AND status = 'online' AND is_active = 1"); $ou_stmt->execute([$cid]);
+$online_count    = (int)$ou_stmt->fetchColumn();
 
 if (is_admin()) {
-    $projects = $db->query("
+    $stmt = $db->prepare("
         SELECT p.*, u.name AS manager_name,
-               (SELECT COUNT(*) FROM tasks WHERE project_id=p.id AND status='done') AS done_count,
-               (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count
-        FROM projects p JOIN users u ON u.id=p.manager_id
+               (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?) AS done_count,
+               (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?) AS task_count
+        FROM projects p JOIN users u ON u.id = p.manager_id
+        WHERE p.company_id = ?
         ORDER BY p.created_at DESC LIMIT 8
-    ")->fetchAll();
+    ");
+    $stmt->execute([$cid, $cid, $cid]);
+    $projects = $stmt->fetchAll();
 } else {
     $stmt = $db->prepare("
         SELECT p.*, u.name AS manager_name,
-               (SELECT COUNT(*) FROM tasks WHERE project_id=p.id AND status='done') AS done_count,
-               (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count
-        FROM projects p JOIN users u ON u.id=p.manager_id
-        WHERE p.created_by = ? OR p.manager_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?)
+               (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?) AS done_count,
+               (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?) AS task_count
+        FROM projects p JOIN users u ON u.id = p.manager_id
+        WHERE p.company_id = ? AND (p.created_by = ? OR p.manager_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ? AND company_id = ?))
         ORDER BY p.created_at DESC LIMIT 8
     ");
-    $stmt->execute([$uid, $uid, $uid]);
+    $stmt->execute([$cid, $cid, $cid, $uid, $uid, $uid, $cid]);
     $projects = $stmt->fetchAll();
 }
 
 // Team members and their task load
-$team = $db->query("
+$team_stmt = $db->prepare("
     SELECT u.id, u.name, u.email, u.role, u.avatar, u.status,
            COUNT(t.id) AS open_tasks
     FROM users u
-    LEFT JOIN tasks t ON t.assigned_to = u.id AND t.status != 'done'
-    WHERE u.is_active = 1 AND u.role IN ('member','manager')
-    GROUP BY u.id
-    ORDER BY open_tasks DESC LIMIT 8
-")->fetchAll();
+    LEFT JOIN tasks t ON t.assigned_to = u.id AND t.status != 'done' AND t.company_id = ?
+    WHERE u.company_id = ? AND u.is_active = 1
+    GROUP BY u.id, u.name, u.email, u.role, u.avatar, u.status
+    ORDER BY open_tasks DESC LIMIT 10
+");
+$team_stmt->execute([$cid, $cid]);
+$team = $team_stmt->fetchAll();
 
 // Recent activity
-$activities = $db->query("
+$act_stmt = $db->prepare("
     SELECT a.*, u.name AS user_name, u.avatar, p.name AS project_name
     FROM activity_logs a
     JOIN users u ON u.id = a.user_id
     LEFT JOIN projects p ON p.id = a.project_id
+    WHERE a.company_id = ?
     ORDER BY a.created_at DESC LIMIT 10
-")->fetchAll();
+");
+$act_stmt->execute([$cid]);
+$activities = $act_stmt->fetchAll();
 
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';

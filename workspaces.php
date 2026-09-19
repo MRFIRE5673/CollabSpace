@@ -7,15 +7,20 @@ $user = current_user();
 $uid  = $user['id'];
 $db   = getDB();
 
+$cid = active_company_id();
+
 if (is_admin()) {
-    $workspaces = $db->query("
+    $stmt = $db->prepare("
         SELECT w.*,
                u.name AS creator_name,
                (SELECT COUNT(*) FROM workspace_members WHERE workspace_id=w.id) AS member_count,
                (SELECT COUNT(*) FROM projects WHERE workspace_id=w.id) AS project_count
         FROM workspaces w JOIN users u ON u.id=w.created_by
+        WHERE w.company_id = ?
         ORDER BY w.created_at DESC
-    ")->fetchAll();
+    ");
+    $stmt->execute([$cid]);
+    $workspaces = $stmt->fetchAll();
 } else {
     $stmt = $db->prepare("
         SELECT w.*,
@@ -23,10 +28,10 @@ if (is_admin()) {
                (SELECT COUNT(*) FROM workspace_members WHERE workspace_id=w.id) AS member_count,
                (SELECT COUNT(*) FROM projects WHERE workspace_id=w.id) AS project_count
         FROM workspaces w JOIN users u ON u.id=w.created_by
-        WHERE w.created_by = ? OR w.id IN (SELECT workspace_id FROM workspace_members WHERE user_id = ?)
+        WHERE w.company_id = ? AND (w.created_by = ? OR w.id IN (SELECT workspace_id FROM workspace_members WHERE user_id = ?))
         ORDER BY w.created_at DESC
     ");
-    $stmt->execute([$uid, $uid]);
+    $stmt->execute([$cid, $uid, $uid]);
     $workspaces = $stmt->fetchAll();
 }
 

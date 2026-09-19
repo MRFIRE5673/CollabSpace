@@ -37,8 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($act === 'change_role') {
         $tid  = (int)($_POST['target_id'] ?? 0);
         $role = $_POST['new_role'] ?? 'member';
-        if ($tid && $tid != $uid && in_array($role,['admin','manager','member'])) {
+        $allowed = ['manager', 'project_manager', 'team_lead', 'member', 'viewer'];
+        if (is_super_admin()) { $allowed[] = 'company_admin'; }
+        if ($tid && $tid != $uid && in_array($role, $allowed)) {
             $db->prepare("UPDATE users SET role=? WHERE id=?")->execute([$role, $tid]);
+            $db->prepare("UPDATE company_members SET role=? WHERE user_id=? AND company_id=?")->execute([$role, $tid, active_company_id()]);
         }
     }
 
@@ -53,23 +56,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+$cid = active_company_id();
 $search = trim($_GET['q'] ?? '');
 $filter_role = $_GET['role'] ?? '';
 
-$where  = '1=1';
-$params = [];
+$where  = 'cm.company_id = ?';
+$params = [$cid];
 if ($search)      { $where .= ' AND (u.name LIKE ? OR u.email LIKE ?)'; $params[] = "%$search%"; $params[] = "%$search%"; }
-if ($filter_role) { $where .= ' AND u.role=?'; $params[] = $filter_role; }
+if ($filter_role) { $where .= ' AND (cm.role=? OR u.role=?)'; $params[] = $filter_role; $params[] = $filter_role; }
 
 $stmt = $db->prepare("
-    SELECT u.*,
-           (SELECT COUNT(*) FROM tasks WHERE assigned_to=u.id) AS task_count,
-           (SELECT COUNT(*) FROM project_members WHERE user_id=u.id) AS project_count
+    SELECT u.*, cm.role AS company_role,
+           (SELECT COUNT(*) FROM tasks WHERE assigned_to=u.id AND company_id=?) AS task_count,
+           (SELECT COUNT(*) FROM project_members pm JOIN projects p ON p.id=pm.project_id WHERE pm.user_id=u.id AND p.company_id=?) AS project_count
     FROM users u
+    JOIN company_members cm ON cm.user_id = u.id
     WHERE $where
     ORDER BY u.created_at DESC
 ");
-$stmt->execute($params);
+$stmt->execute(array_merge([$cid, $cid], $params));
 $users = $stmt->fetchAll();
 
 $role_colors = ['admin'=>'danger','manager'=>'primary','member'=>'success'];
@@ -97,10 +102,10 @@ include __DIR__ . '/includes/header.php';
     <!-- Stats -->
     <div class="row g-3 mb-4">
       <?php
-        $admin_count   = $db->query("SELECT COUNT(*) FROM users WHERE role='admin' AND is_active=1")->fetchColumn();
-        $manager_count = $db->query("SELECT COUNT(*) FROM users WHERE role='manager' AND is_active=1")->fetchColumn();
-        $member_count  = $db->query("SELECT COUNT(*) FROM users WHERE role='member' AND is_active=1")->fetchColumn();
-        $inactive_count = $db->query("SELECT COUNT(*) FROM users WHERE is_active=0")->fetchColumn();
+        $admin_count   = $db->prepare("SELECT COUNT(*) FROM company_members WHERE company_id=? AND role IN ('company_admin','admin') AND is_active=1"); $admin_count->execute([$cid]); $admin_count = $admin_count->fetchColumn();
+        $manager_count = $db->prepare("SELECT COUNT(*) FROM company_members WHERE company_id=? AND role IN ('manager','project_manager') AND is_active=1"); $manager_count->execute([$cid]); $manager_count = $manager_count->fetchColumn();
+        $member_count  = $db->prepare("SELECT COUNT(*) FROM company_members WHERE company_id=? AND role IN ('member','team_lead','viewer') AND is_active=1"); $member_count->execute([$cid]); $member_count = $member_count->fetchColumn();
+        $inactive_count = $db->prepare("SELECT COUNT(*) FROM company_members WHERE company_id=? AND is_active=0"); $inactive_count->execute([$cid]); $inactive_count = $inactive_count->fetchColumn();
       ?>
       <div class="col-6 col-lg-3">
         <div class="card stat-card text-white" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
@@ -197,13 +202,17 @@ include __DIR__ . '/includes/header.php';
                         Role
                       </button>
                       <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                        <?php foreach (['admin','manager','member'] as $r): ?>
+                        <?php 
+                          $roleOptions = ['manager','project_manager','team_lead','member','viewer'];
+                          if (is_super_admin()) { array_unshift($roleOptions, 'company_admin'); }
+                          foreach ($roleOptions as $r): 
+                        ?>
                         <li>
                           <form method="POST">
                             <input type="hidden" name="action" value="change_role">
                             <input type="hidden" name="target_id" value="<?= $u['id'] ?>">
                             <input type="hidden" name="new_role" value="<?= $r ?>">
-                            <button type="submit" class="dropdown-item small <?= $u['role']===$r?'active':'' ?>" id="role-<?= $r ?>-<?= $u['id'] ?>"><?= ucfirst($r) ?></button>
+                            <button type="submit" class="dropdown-item small <?= ($u['company_role']??$u['role'])===$r?'active':'' ?>" id="role-<?= $r ?>-<?= $u['id'] ?>"><?= ucfirst(str_replace('_',' ',$r)) ?></button>
                           </form>
                         </li>
                         <?php endforeach; ?>

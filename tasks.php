@@ -11,23 +11,27 @@ $project_id = (int)($_GET['project_id'] ?? 0);
 $filter_priority = $_GET['priority'] ?? '';
 $filter_assignee = (int)($_GET['assignee'] ?? 0);
 
+$cid = active_company_id();
+
 // Build query
-$where  = '1=1';
-$params = [];
+$where  = 't.company_id = ?';
+$params = [$cid];
 if ($project_id) { $where .= ' AND t.project_id=?'; $params[] = $project_id; }
 if ($filter_priority) { $where .= ' AND t.priority=?'; $params[] = $filter_priority; }
 if ($filter_assignee) { $where .= ' AND t.assigned_to=?'; $params[] = $filter_assignee; }
 
 // Fetch projects for filter
 if (!is_admin()) {
-    $projects_list = $db->prepare("SELECT id, name FROM projects WHERE created_by=? OR manager_id=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?) ORDER BY name");
-    $projects_list->execute([$uid, $uid, $uid]);
+    $projects_list = $db->prepare("SELECT id, name FROM projects WHERE company_id=? AND (created_by=? OR manager_id=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?)) ORDER BY name");
+    $projects_list->execute([$cid, $uid, $uid, $uid]);
     $projects_list = $projects_list->fetchAll();
 
-    $where .= ' AND (t.assigned_to=? OR t.created_by=? OR t.project_id IN (SELECT id FROM projects WHERE manager_id=? OR created_by=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?)))';
-    $params[] = $uid; $params[] = $uid; $params[] = $uid; $params[] = $uid; $params[] = $uid;
+    $where .= ' AND (t.assigned_to=? OR t.created_by=? OR t.project_id IN (SELECT id FROM projects WHERE company_id=? AND (manager_id=? OR created_by=? OR id IN (SELECT project_id FROM project_members WHERE user_id=?))))';
+    $params[] = $uid; $params[] = $uid; $params[] = $cid; $params[] = $uid; $params[] = $uid; $params[] = $uid;
 } else {
-    $projects_list = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
+    $projects_list = $db->prepare("SELECT id, name FROM projects WHERE company_id=? ORDER BY name");
+    $projects_list->execute([$cid]);
+    $projects_list = $projects_list->fetchAll();
 }
 
 $stmt = $db->prepare("
@@ -46,8 +50,15 @@ foreach ($all_tasks as $t) {
     $kanban_cols[$t['status']][] = $t;
 }
 
-$all_users = $db->query("SELECT id, name FROM users WHERE is_active=1 ORDER BY name")->fetchAll();
-$selected_project = $project_id ? $db->prepare("SELECT name FROM projects WHERE id=?")->execute([$project_id]) ? $db->query("SELECT name FROM projects WHERE id=$project_id")->fetchColumn() : '' : '';
+$all_users_stmt = $db->prepare("SELECT u.id, u.name FROM users u JOIN company_members cm ON cm.user_id = u.id WHERE cm.company_id = ? AND cm.is_active = 1 AND u.is_active = 1 ORDER BY u.name");
+$all_users_stmt->execute([$cid]);
+$all_users = $all_users_stmt->fetchAll();
+$selected_project = '';
+if ($project_id) {
+    $sp_stmt = $db->prepare("SELECT name FROM projects WHERE id=? AND company_id=?");
+    $sp_stmt->execute([$project_id, $cid]);
+    $selected_project = $sp_stmt->fetchColumn() ?: '';
+}
 
 include __DIR__ . '/includes/header.php';
 ?>

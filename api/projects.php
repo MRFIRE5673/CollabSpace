@@ -1,13 +1,16 @@
 <?php
-// ─── Projects API ─────────────────────────────────────────────
+// ============================================================
+// Multi-Tenant Projects API Endpoint
+// ============================================================
 if (session_status() === PHP_SESSION_NONE) session_start();
 header('Content-Type: application/json');
 require_once __DIR__ . '/../includes/auth.php';
 
 if (!is_logged_in()) { echo json_encode(['error' => 'Unauthorized']); exit; }
 
-$user = current_user();
-$uid  = $user['id'];
+$user   = current_user();
+$uid    = $user['id'];
+$cid    = active_company_id();
 session_write_close();
 $db     = getDB();
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
@@ -26,20 +29,19 @@ switch ($action) {
 
         if (!$name) { echo json_encode(['success' => false, 'message' => 'Project name required.']); exit; }
 
-        $stmt = $db->prepare("INSERT INTO projects (workspace_id, name, description, status, priority, start_date, due_date, manager_id, created_by) VALUES (?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$ws_id, $name, $description, $status, $priority, $start_date, $due_date, $manager_id, $uid]);
+        $stmt = $db->prepare("INSERT INTO projects (company_id, workspace_id, name, description, status, priority, start_date, due_date, manager_id, created_by) VALUES (?,?,?,?,?,?,?,?,?,?)");
+        $stmt->execute([$cid, $ws_id, $name, $description, $status, $priority, $start_date, $due_date, $manager_id, $uid]);
         $pid = $db->lastInsertId();
 
-        $db->prepare("INSERT IGNORE INTO project_members (project_id, user_id) VALUES (?,?)")->execute([$pid, $uid]);
+        $db->prepare("INSERT INTO project_members (company_id, project_id, user_id) VALUES (?,?,?)")->execute([$cid, $pid, $uid]);
         if ($manager_id != $uid) {
-            $db->prepare("INSERT IGNORE INTO project_members (project_id, user_id) VALUES (?,?)")->execute([$pid, $manager_id]);
+            $db->prepare("INSERT INTO project_members (company_id, project_id, user_id) VALUES (?,?,?)")->execute([$cid, $pid, $manager_id]);
         }
 
-        log_activity($pid, $uid, 'project_created', "Created project: $name", 'project', $pid);
+        log_activity($cid, $pid, $uid, 'project_created', "Created project: $name", 'project', $pid);
 
-        // Fetch back with manager name
-        $proj = $db->prepare("SELECT p.*, u.name AS manager_name FROM projects p JOIN users u ON u.id=p.manager_id WHERE p.id=?");
-        $proj->execute([$pid]);
+        $proj = $db->prepare("SELECT p.*, u.name AS manager_name FROM projects p JOIN users u ON u.id = p.manager_id WHERE p.id = ? AND p.company_id = ?");
+        $proj->execute([$pid, $cid]);
         $project = $proj->fetch();
 
         echo json_encode(['success' => true, 'project' => $project]);
@@ -48,7 +50,7 @@ switch ($action) {
     case 'delete':
         $pid = (int)($_POST['project_id'] ?? 0);
         if (!$pid || !is_admin()) { echo json_encode(['success' => false, 'message' => 'Not authorized']); exit; }
-        $db->prepare("DELETE FROM projects WHERE id=?")->execute([$pid]);
+        $db->prepare("DELETE FROM projects WHERE id = ? AND company_id = ?")->execute([$pid, $cid]);
         echo json_encode(['success' => true]);
         break;
 
@@ -57,7 +59,7 @@ switch ($action) {
         $status = $_POST['status'] ?? '';
         $allowed = ['planning','active','on_hold','completed','cancelled'];
         if (!$pid || !in_array($status, $allowed)) { echo json_encode(['success' => false]); exit; }
-        $db->prepare("UPDATE projects SET status=? WHERE id=?")->execute([$status, $pid]);
+        $db->prepare("UPDATE projects SET status = ? WHERE id = ? AND company_id = ?")->execute([$status, $pid, $cid]);
         echo json_encode(['success' => true]);
         break;
 
@@ -70,11 +72,19 @@ switch ($action) {
             exit;
         }
 
-        $db->prepare("INSERT IGNORE INTO project_members (project_id, user_id) VALUES (?,?)")->execute([$pid, $user_id]);
+        // Verify target user belongs to same company
+        $u_check = $db->prepare("SELECT id, name FROM users WHERE id = ? AND company_id = ? LIMIT 1");
+        $u_check->execute([$user_id, $cid]);
+        $target_user = $u_check->fetch();
 
-        $u_name = $db->query("SELECT name FROM users WHERE id=$user_id")->fetchColumn() ?: 'User';
-        log_activity($pid, $uid, 'member_added', "Added $u_name to project", 'project', $pid);
+        if (!$target_user) {
+            echo json_encode(['success' => false, 'message' => 'User does not belong to your company.']);
+            exit;
+        }
 
+        $db->prepare("INSERT INTO project_members (company_id, project_id, user_id) VALUES (?,?,?)")->execute([$cid, $pid, $user_id]);
+
+        log_activity($cid, $pid, $uid, 'member_added', "Added {$target_user['name']} to project", 'project', $pid);
         echo json_encode(['success' => true]);
         break;
 
@@ -87,8 +97,7 @@ switch ($action) {
             exit;
         }
 
-        $db->prepare("DELETE FROM project_members WHERE project_id=? AND user_id=?")->execute([$pid, $user_id]);
-
+        $db->prepare("DELETE FROM project_members WHERE project_id = ? AND user_id = ? AND company_id = ?")->execute([$pid, $user_id, $cid]);
         echo json_encode(['success' => true]);
         break;
 

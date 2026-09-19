@@ -10,12 +10,13 @@ $db   = getDB();
 $wid = (int)($_GET['id'] ?? 0);
 if (!$wid) { header('Location: workspaces.php'); exit; }
 
+$cid = active_company_id();
 $stmt = $db->prepare("
     SELECT w.*, u.name AS creator_name
     FROM workspaces w JOIN users u ON u.id=w.created_by
-    WHERE w.id=?
+    WHERE w.id=? AND w.company_id=?
 ");
-$stmt->execute([$wid]);
+$stmt->execute([$wid, $cid]);
 $ws = $stmt->fetch();
 if (!$ws) { header('Location: workspaces.php'); exit; }
 
@@ -54,7 +55,9 @@ $members_stmt->execute([$wid]);
 $members = $members_stmt->fetchAll();
 
 // All users (for project manager dropdown)
-$all_users = $db->query("SELECT id, name FROM users WHERE is_active=1 ORDER BY name")->fetchAll();
+$all_users = $db->prepare("SELECT u.id, u.name FROM users u JOIN company_members cm ON cm.user_id = u.id WHERE cm.company_id = ? AND cm.is_active = 1 AND u.is_active = 1 ORDER BY u.name");
+$all_users->execute([$cid]);
+$all_users = $all_users->fetchAll();
 
 $page_title = $ws['name'] . ' | Workspace';
 $status_colors = ['planning'=>'info','active'=>'primary','on_hold'=>'warning','completed'=>'success','cancelled'=>'danger'];

@@ -25,10 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $result = attempt_register($name, $email, $password, 'member');
         if ($result['success']) {
-            // Auto-login
-            $login = attempt_login($email, $password);
-            if ($login['success']) redirect('dashboard.php');
-            $success = 'Account created! You can now <a href="login.php">sign in</a>.';
+            $success = $result['message'];
         } else {
             $error = $result['message'];
         }

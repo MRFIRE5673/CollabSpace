@@ -3,9 +3,13 @@
 .env.local
 .env.production
 
-# ── Uploads (user files — don't commit) ──────────────────────
+# ── Uploads & Storage (user files — don't commit) ──────────────
 /uploads/*
 !/uploads/.gitkeep
+/private_storage/*
+!/private_storage/.gitkeep
+*.sqlite
+*.sqlite-journal
 
 # ── System files ─────────────────────────────────────────────
 .DS_Store

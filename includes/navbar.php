@@ -135,7 +135,11 @@ $notifs = $notifs->fetchAll();
           <div class="py-1">
             <a class="dropdown-item py-2 px-4" href="profile.php"><i class="bi bi-person me-2 text-primary"></i>My Profile</a>
             <a class="dropdown-item py-2 px-4" href="dashboard.php"><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</a>
+            <?php if (is_super_admin()): ?>
+            <a class="dropdown-item py-2 px-4 text-warning" href="superadmin_dashboard.php"><i class="bi bi-shield-lock me-2"></i>Super Admin</a>
+            <?php endif; ?>
             <?php if (is_admin()): ?>
+            <a class="dropdown-item py-2 px-4" href="login_approval.php"><i class="bi bi-shield-check me-2 text-info"></i>Login Approvals</a>
             <a class="dropdown-item py-2 px-4" href="users.php"><i class="bi bi-people me-2 text-success"></i>Manage Users</a>
             <?php endif; ?>
             <div class="dropdown-divider my-1"></div>

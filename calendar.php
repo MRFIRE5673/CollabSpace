@@ -24,14 +24,15 @@ $start_dow = (int)date('w', $first_day); // 0=Sun
 $start_date = date('Y-m-01', $first_day);
 $end_date   = date('Y-m-t',  $first_day);
 
+$cid = active_company_id();
 $task_events = $db->prepare("
     SELECT t.id, t.title, t.priority, t.status, t.due_date,
            p.name AS project_name, p.id AS project_id
     FROM tasks t JOIN projects p ON p.id=t.project_id
-    WHERE t.due_date BETWEEN ? AND ?
+    WHERE t.company_id = ? AND t.due_date BETWEEN ? AND ?
     ORDER BY t.due_date, t.priority DESC
 ");
-$task_events->execute([$start_date, $end_date]);
+$task_events->execute([$cid, $start_date, $end_date]);
 $task_events = $task_events->fetchAll();
 
 // Group by day

@@ -7,40 +7,58 @@ require_login();
 // All logged-in users can access viewer portal (it's the most restricted role)
 // Higher roles are redirected to their own page, but can browse here too
 $user = current_user();
+$cid  = active_company_id();
 $db   = getDB();
 
-// ── Read-Only Stats ───────────────────────────────────────────
-$total_projects  = (int)$db->query("SELECT COUNT(*) FROM projects")->fetchColumn();
-$active_projects = (int)$db->query("SELECT COUNT(*) FROM projects WHERE status='active'")->fetchColumn();
-$total_tasks     = (int)$db->query("SELECT COUNT(*) FROM tasks")->fetchColumn();
-$done_tasks      = (int)$db->query("SELECT COUNT(*) FROM tasks WHERE status='done'")->fetchColumn();
+// ── Read-Only Stats (Company Scoped) ───────────────────────────
+$p_stmt = $db->prepare("SELECT COUNT(*) FROM projects WHERE company_id = ?"); $p_stmt->execute([$cid]);
+$total_projects  = (int)$p_stmt->fetchColumn();
+
+$ap_stmt = $db->prepare("SELECT COUNT(*) FROM projects WHERE company_id = ? AND status = 'active'"); $ap_stmt->execute([$cid]);
+$active_projects = (int)$ap_stmt->fetchColumn();
+
+$t_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ?"); $t_stmt->execute([$cid]);
+$total_tasks     = (int)$t_stmt->fetchColumn();
+
+$dt_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ? AND status = 'done'"); $dt_stmt->execute([$cid]);
+$done_tasks      = (int)$dt_stmt->fetchColumn();
 $completion_pct  = $total_tasks > 0 ? round(($done_tasks / $total_tasks) * 100) : 0;
-$total_members   = (int)$db->query("SELECT COUNT(*) FROM users WHERE is_active=1")->fetchColumn();
+
+$u_stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id = ? AND is_active = 1"); $u_stmt->execute([$cid]);
+$total_members   = (int)$u_stmt->fetchColumn();
 
 // Projects summary (read-only)
-$projects = $db->query("
+$proj_stmt = $db->prepare("
     SELECT p.*, u.name AS manager_name,
-           (SELECT COUNT(*) FROM tasks WHERE project_id=p.id AND status='done')  AS done_count,
-           (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count
-    FROM projects p JOIN users u ON u.id=p.manager_id
+           (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?)  AS done_count,
+           (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?) AS task_count
+    FROM projects p JOIN users u ON u.id = p.manager_id
+    WHERE p.company_id = ?
     ORDER BY p.created_at DESC
-")->fetchAll();
+");
+$proj_stmt->execute([$cid, $cid, $cid]);
+$projects = $proj_stmt->fetchAll();
 
 // Team overview (no PII)
-$team = $db->query("
-    SELECT id, name, role, avatar, status,
-           (SELECT COUNT(*) FROM tasks WHERE assigned_to=users.id AND status='done') AS done_tasks
-    FROM users WHERE is_active=1 ORDER BY role, name LIMIT 12
-")->fetchAll();
+$team_stmt = $db->prepare("
+    SELECT u.id, u.name, u.role, u.avatar, u.status,
+           (SELECT COUNT(*) FROM tasks WHERE assigned_to = u.id AND company_id = ? AND status = 'done') AS done_tasks
+    FROM users u WHERE u.company_id = ? AND u.is_active = 1 ORDER BY u.role, u.name LIMIT 12
+");
+$team_stmt->execute([$cid, $cid]);
+$team = $team_stmt->fetchAll();
 
 // Recent public activity
-$activities = $db->query("
+$act_stmt = $db->prepare("
     SELECT a.description, a.action, a.created_at, u.name AS user_name, u.avatar, p.name AS project_name
     FROM activity_logs a
     JOIN users u ON u.id = a.user_id
     LEFT JOIN projects p ON p.id = a.project_id
+    WHERE a.company_id = ?
     ORDER BY a.created_at DESC LIMIT 12
-")->fetchAll();
+");
+$act_stmt->execute([$cid]);
+$activities = $act_stmt->fetchAll();
 
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';

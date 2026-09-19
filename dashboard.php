@@ -7,49 +7,72 @@ require_login();
 if (!is_admin()) { redirect(get_role_redirect($_SESSION['user_role'] ?? 'member')); }
 $user = current_user();
 $uid  = $user['id'];
+$cid  = active_company_id();
 $db   = getDB();
 
-// ── Stats ────────────────────────────────────────────────────
-$total_projects  = (int)$db->query("SELECT COUNT(*) FROM projects")->fetchColumn();
-$active_projects = (int)$db->query("SELECT COUNT(*) FROM projects WHERE status='active'")->fetchColumn();
-$total_users     = (int)$db->query("SELECT COUNT(*) FROM users WHERE is_active=1")->fetchColumn();
-$total_tasks     = (int)$db->query("SELECT COUNT(*) FROM tasks")->fetchColumn();
-$completed_tasks = (int)$db->query("SELECT COUNT(*) FROM tasks WHERE status='done'")->fetchColumn();
-$pending_tasks   = (int)$db->query("SELECT COUNT(*) FROM tasks WHERE status!='done'")->fetchColumn();
-$online_count    = (int)$db->query("SELECT COUNT(*) FROM users WHERE status='online' AND is_active=1")->fetchColumn();
+// ── Stats (Company Scoped) ───────────────────────────────────
+$p_stmt = $db->prepare("SELECT COUNT(*) FROM projects WHERE company_id = ?"); $p_stmt->execute([$cid]);
+$total_projects  = (int)$p_stmt->fetchColumn();
 
-$my_tasks_count  = (int)$db->query("SELECT COUNT(*) FROM tasks WHERE assigned_to=$uid AND status!='done'")->fetchColumn();
+$ap_stmt = $db->prepare("SELECT COUNT(*) FROM projects WHERE company_id = ? AND status = 'active'"); $ap_stmt->execute([$cid]);
+$active_projects = (int)$ap_stmt->fetchColumn();
+
+$u_stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id = ? AND is_active = 1"); $u_stmt->execute([$cid]);
+$total_users     = (int)$u_stmt->fetchColumn();
+
+$t_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ?"); $t_stmt->execute([$cid]);
+$total_tasks     = (int)$t_stmt->fetchColumn();
+
+$ct_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ? AND status = 'done'"); $ct_stmt->execute([$cid]);
+$completed_tasks = (int)$ct_stmt->fetchColumn();
+
+$pt_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ? AND status != 'done'"); $pt_stmt->execute([$cid]);
+$pending_tasks   = (int)$pt_stmt->fetchColumn();
+
+$ou_stmt = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id = ? AND status = 'online' AND is_active = 1"); $ou_stmt->execute([$cid]);
+$online_count    = (int)$ou_stmt->fetchColumn();
+
+$mt_stmt = $db->prepare("SELECT COUNT(*) FROM tasks WHERE company_id = ? AND assigned_to = ? AND status != 'done'"); $mt_stmt->execute([$cid, $uid]);
+$my_tasks_count  = (int)$mt_stmt->fetchColumn();
 
 // My open tasks
 $my_tasks_stmt = $db->prepare("
     SELECT t.*, p.name AS project_name
     FROM tasks t JOIN projects p ON p.id = t.project_id
-    WHERE t.assigned_to = ? AND t.status != 'done'
+    WHERE t.company_id = ? AND t.assigned_to = ? AND t.status != 'done'
     ORDER BY t.priority DESC, t.due_date ASC LIMIT 8
 ");
-$my_tasks_stmt->execute([$uid]);
+$my_tasks_stmt->execute([$cid, $uid]);
 $my_tasks = $my_tasks_stmt->fetchAll();
 
 // Recent projects
-$projects = $db->query("
+$proj_stmt = $db->prepare("
     SELECT p.*, u.name AS manager_name,
-           (SELECT COUNT(*) FROM tasks WHERE project_id=p.id AND status='done') AS done_count,
-           (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count
-    FROM projects p JOIN users u ON u.id=p.manager_id
+           (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?) AS done_count,
+           (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?) AS task_count
+    FROM projects p JOIN users u ON u.id = p.manager_id
+    WHERE p.company_id = ?
     ORDER BY p.created_at DESC LIMIT 6
-")->fetchAll();
+");
+$proj_stmt->execute([$cid, $cid, $cid]);
+$projects = $proj_stmt->fetchAll();
 
 // Recent activity
-$activities = $db->query("
+$act_stmt = $db->prepare("
     SELECT a.*, u.name AS user_name, u.avatar, p.name AS project_name
     FROM activity_logs a
     JOIN users u ON u.id = a.user_id
     LEFT JOIN projects p ON p.id = a.project_id
+    WHERE a.company_id = ?
     ORDER BY a.created_at DESC LIMIT 10
-")->fetchAll();
+");
+$act_stmt->execute([$cid]);
+$activities = $act_stmt->fetchAll();
 
 // Online users
-$online_users = $db->query("SELECT * FROM users WHERE status='online' AND is_active=1 ORDER BY name ASC LIMIT 12")->fetchAll();
+$online_stmt = $db->prepare("SELECT * FROM users WHERE company_id = ? AND status = 'online' AND is_active = 1 ORDER BY name ASC LIMIT 12");
+$online_stmt->execute([$cid]);
+$online_users = $online_stmt->fetchAll();
 
 $action_icons = [
     'task_created'        => ['bi-plus-circle-fill',          'primary'],

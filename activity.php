@@ -13,8 +13,10 @@ $page           = max(1, (int)($_GET['page'] ?? 1));
 $per_page       = 20;
 $offset         = ($page - 1) * $per_page;
 
-$where  = '1=1';
-$params = [];
+$cid = active_company_id();
+
+$where  = 'a.company_id = ?';
+$params = [$cid];
 if ($project_filter) { $where .= ' AND a.project_id=?'; $params[] = $project_filter; }
 if ($action_filter)  { $where .= ' AND a.action=?';     $params[] = $action_filter; }
 
@@ -35,7 +37,9 @@ $stmt = $db->prepare("
 $stmt->execute($params);
 $activities = $stmt->fetchAll();
 
-$projects_list = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
+$projects_list = $db->prepare("SELECT id, name FROM projects WHERE company_id=? ORDER BY name");
+$projects_list->execute([$cid]);
+$projects_list = $projects_list->fetchAll();
 
 $action_icons = [
     'task_created'        => ['bi-plus-circle-fill', 'primary'],
@@ -166,7 +170,9 @@ include __DIR__ . '/includes/header.php';
           </div>
           <div class="card-body">
             <?php
-              $action_counts = $db->query("SELECT action, COUNT(*) as cnt FROM activity_logs GROUP BY action ORDER BY cnt DESC")->fetchAll();
+              $ac_stmt = $db->prepare("SELECT action, COUNT(*) as cnt FROM activity_logs WHERE company_id=? GROUP BY action ORDER BY cnt DESC");
+              $ac_stmt->execute([$cid]);
+              $action_counts = $ac_stmt->fetchAll();
             ?>
             <?php foreach ($action_counts as $ac): ?>
             <?php [$icon2, $color2] = $action_icons[$ac['action']] ?? ['bi-bell','secondary']; ?>
@@ -191,11 +197,14 @@ include __DIR__ . '/includes/header.php';
           </div>
           <div class="card-body p-0">
             <?php
-              $active_members = $db->query("
+              $am_stmt = $db->prepare("
                   SELECT u.name, u.role, COUNT(a.id) AS activity_count
                   FROM activity_logs a JOIN users u ON u.id=a.user_id
+                  WHERE a.company_id=?
                   GROUP BY a.user_id ORDER BY activity_count DESC LIMIT 5
-              ")->fetchAll();
+              ");
+              $am_stmt->execute([$cid]);
+              $active_members = $am_stmt->fetchAll();
             ?>
             <?php foreach ($active_members as $i => $m): ?>
             <div class="d-flex align-items-center gap-3 px-3 py-2 border-bottom">

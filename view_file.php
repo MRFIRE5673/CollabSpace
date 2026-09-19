@@ -6,6 +6,7 @@ require_login();
 
 $user = current_user();
 $uid  = $user['id'];
+$cid  = active_company_id();
 $db   = getDB();
 
 $fid   = (int)($_GET['id'] ?? 0);
@@ -14,12 +15,12 @@ $fname = trim($_GET['file'] ?? '');
 $file_rec = null;
 
 if ($fid) {
-    $stmt = $db->prepare("SELECT f.*, u.name AS uploader_name, p.name AS project_name FROM files f JOIN users u ON u.id=f.uploaded_by LEFT JOIN projects p ON p.id=f.project_id WHERE f.id=?");
-    $stmt->execute([$fid]);
+    $stmt = $db->prepare("SELECT f.*, u.name AS uploader_name, p.name AS project_name FROM files f JOIN users u ON u.id = f.uploaded_by LEFT JOIN projects p ON p.id = f.project_id WHERE f.id = ? AND f.company_id = ?");
+    $stmt->execute([$fid, $cid]);
     $file_rec = $stmt->fetch();
     if (!$file_rec) {
-        $cstmt = $db->prepare("SELECT c.id AS chat_id, c.file_path AS file_name, c.file_name AS original_name, c.created_at AS uploaded_at, u.name AS uploader_name, p.name AS project_name FROM chats c JOIN users u ON u.id=c.sender_id LEFT JOIN projects p ON p.id=c.project_id WHERE c.id=?");
-        $cstmt->execute([$fid]);
+        $cstmt = $db->prepare("SELECT c.id AS chat_id, c.file_path AS file_name, c.file_name AS original_name, c.created_at AS uploaded_at, u.name AS uploader_name, p.name AS project_name FROM chats c JOIN users u ON u.id = c.sender_id LEFT JOIN projects p ON p.id = c.project_id WHERE c.id = ? AND c.company_id = ?");
+        $cstmt->execute([$fid, $cid]);
         $file_rec = $cstmt->fetch();
         if ($file_rec && empty($file_rec['original_name'])) {
             $file_rec['original_name'] = $file_rec['file_name'];
@@ -28,28 +29,19 @@ if ($fid) {
 }
 
 if (!$file_rec && $fname) {
-    $stmt = $db->prepare("SELECT f.*, u.name AS uploader_name, p.name AS project_name FROM files f JOIN users u ON u.id=f.uploaded_by LEFT JOIN projects p ON p.id=f.project_id WHERE f.file_name=?");
-    $stmt->execute([$fname]);
+    $stmt = $db->prepare("SELECT f.*, u.name AS uploader_name, p.name AS project_name FROM files f JOIN users u ON u.id = f.uploaded_by LEFT JOIN projects p ON p.id = f.project_id WHERE f.file_name = ? AND f.company_id = ?");
+    $stmt->execute([$fname, $cid]);
     $file_rec = $stmt->fetch();
 
     if (!$file_rec) {
-        $cstmt = $db->prepare("SELECT c.id AS chat_id, c.file_path AS file_name, c.file_name AS original_name, c.created_at AS uploaded_at, u.name AS uploader_name, p.name AS project_name FROM chats c JOIN users u ON u.id=c.sender_id LEFT JOIN projects p ON p.id=c.project_id WHERE c.file_path=?");
-        $cstmt->execute([$fname]);
+        $cstmt = $db->prepare("SELECT c.id AS chat_id, c.file_path AS file_name, c.file_name AS original_name, c.created_at AS uploaded_at, u.name AS uploader_name, p.name AS project_name FROM chats c JOIN users u ON u.id = c.sender_id LEFT JOIN projects p ON p.id = c.project_id WHERE c.file_path = ? AND c.company_id = ?");
+        $cstmt->execute([$fname, $cid]);
         $chat_rec = $cstmt->fetch();
 
         if ($chat_rec) {
             $file_rec = $chat_rec;
             $file_rec['id'] = 0;
             if (empty($file_rec['original_name'])) $file_rec['original_name'] = $fname;
-        } elseif (file_exists(UPLOAD_DIR . $fname)) {
-            $file_rec = [
-                'id' => 0,
-                'file_name' => $fname,
-                'original_name' => $fname,
-                'uploader_name' => 'Attachment',
-                'uploaded_at' => date('Y-m-d H:i:s'),
-                'project_name' => null
-            ];
         }
     }
 }
@@ -61,11 +53,10 @@ if (!$file_rec) {
 
 $file_name     = $file_rec['file_name'];
 $original_name = !empty($file_rec['original_name']) ? $file_rec['original_name'] : $file_name;
-$file_path     = UPLOAD_DIR . $file_name;
 $ext           = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
 
-// Build Public Raw Stream URL
-$raw_stream_src = 'raw_file.php?' . ($file_rec['id'] ? 'id=' . $file_rec['id'] : 'file=' . urlencode($file_name));
+// Build Secure Private Stream URL
+$raw_stream_src = 'api/files.php?action=preview&' . (!empty($file_rec['id']) ? 'id=' . $file_rec['id'] : 'file=' . urlencode($file_name));
 
 $host_protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
 $current_host  = $_SERVER['HTTP_HOST'] ?? 'localhost';

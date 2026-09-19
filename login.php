@@ -9,6 +9,7 @@ if (is_logged_in()) {
 }
 
 $error = '';
+$warning = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -16,7 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($result['success']) {
         redirect($result['redirect']);
     } else {
-        $error = $result['message'];
+        if (!empty($result['status']) && $result['status'] === 'pending') {
+            $warning = $result['message'];
+        } else {
+            $error = $result['message'];
+        }
     }
 }
 ?>
@@ -60,6 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card-body p-4">
       <h1 class="h5 fw-bold mb-1">Welcome back 👋</h1>
       <p class="text-muted small mb-4">Sign in to your workspace account</p>
+
+      <?php if ($warning): ?>
+      <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-3" role="alert" id="login-warning">
+        <i class="bi bi-clock-history fs-5"></i>
+        <span><?= htmlspecialchars($warning) ?></span>
+      </div>
+      <?php endif; ?>
 
       <?php if ($error): ?>
       <div class="alert alert-danger d-flex align-items-center gap-2 py-2 shake" role="alert" id="login-error">

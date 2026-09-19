@@ -30,7 +30,7 @@ function nav_link(string $href, string $icon, string $label, string $current, ?s
       </div>
       <div class="overflow-hidden">
         <div class="brand-text fw-bold">CollabSpace</div>
-        <div class="brand-tagline">Pro Workspace</div>
+        <div class="brand-tagline text-truncate" style="max-width:140px;" title="<?= htmlspecialchars(get_active_company_name()) ?>"><?= htmlspecialchars(get_active_company_name()) ?></div>
       </div>
     </a>
     <div class="d-flex align-items-center gap-2">
@@ -93,10 +93,25 @@ function nav_link(string $href, string $icon, string $label, string $current, ?s
         <?= nav_link('activity.php', 'bi-activity',  'Activity Feed', $current_page) ?>
         <?php endif; ?>
 
+        <?php if (is_super_admin()): ?>
+        <!-- Platform Governance Section -->
+        <li class="nav-header">Platform Admin</li>
+        <?= nav_link('superadmin_dashboard.php', 'bi-shield-lock-fill', 'Super Admin', $current_page) ?>
+        <?php endif; ?>
+
         <?php if (is_admin()): ?>
         <!-- Administration Section -->
         <li class="nav-header">Administration</li>
-        <?= nav_link('users.php', 'bi-people-fill', 'User Management', $current_page) ?>
+        <?php
+          $pending_count = 0;
+          if (has_role('company_admin')) {
+              $p_stmt = getDB()->prepare("SELECT COUNT(*) FROM login_approval_requests WHERE company_id=? AND status='pending'");
+              $p_stmt->execute([active_company_id()]);
+              $pending_count = (int)$p_stmt->fetchColumn();
+          }
+          echo nav_link('login_approval.php', 'bi-shield-check', 'Login Approvals', $current_page, $pending_count > 0 ? (string)$pending_count : null, 'bg-warning text-dark');
+          echo nav_link('users.php', 'bi-people-fill', 'User Management', $current_page);
+        ?>
         <?php endif; ?>
 
       </ul>

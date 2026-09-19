@@ -5,15 +5,16 @@ require_once __DIR__ . '/includes/auth.php';
 require_login();
 $user = current_user();
 $uid  = $user['id'];
+$cid  = active_company_id();
 $db   = getDB();
 
-// Handle POST (legacy fallback — AJAX preferred)
+// Handle POST (delete action)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'delete') {
         $pid = (int)($_POST['project_id'] ?? 0);
         if ($pid && is_admin()) {
-            $db->prepare("DELETE FROM projects WHERE id=?")->execute([$pid]);
+            $db->prepare("DELETE FROM projects WHERE id = ? AND company_id = ?")->execute([$pid, $cid]);
         }
         header('Location: projects.php');
         exit;
@@ -25,35 +26,41 @@ $search   = trim($_GET['q'] ?? '');
 $filter_s = $_GET['status'] ?? '';
 $filter_p = $_GET['priority'] ?? '';
 
-$where  = '1=1';
-$params = [];
+$where  = 'p.company_id = ?';
+$params = [$cid];
 if ($search)   { $where .= " AND p.name LIKE ?";   $params[] = "%$search%"; }
-if ($filter_s) { $where .= " AND p.status=?";       $params[] = $filter_s; }
-if ($filter_p) { $where .= " AND p.priority=?";     $params[] = $filter_p; }
+if ($filter_s) { $where .= " AND p.status = ?";    $params[] = $filter_s; }
+if ($filter_p) { $where .= " AND p.priority = ?";  $params[] = $filter_p; }
 
 if (!is_admin()) {
-    $where .= " AND (p.created_by = ? OR p.manager_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ?))";
+    $where .= " AND (p.created_by = ? OR p.manager_id = ? OR p.id IN (SELECT project_id FROM project_members WHERE user_id = ? AND company_id = ?))";
     $params[] = $uid;
     $params[] = $uid;
     $params[] = $uid;
+    $params[] = $cid;
 }
 
 $stmt = $db->prepare("
     SELECT p.*, u.name AS manager_name,
-           (SELECT COUNT(*) FROM tasks WHERE project_id=p.id) AS task_count,
-           (SELECT COUNT(*) FROM tasks WHERE project_id=p.id AND status='done') AS done_count,
-           (SELECT COUNT(*) FROM project_members WHERE project_id=p.id) AS member_count
+           (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ?) AS task_count,
+           (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND company_id = ? AND status = 'done') AS done_count,
+           (SELECT COUNT(*) FROM project_members WHERE project_id = p.id AND company_id = ?) AS member_count
     FROM projects p
     JOIN users u ON u.id = p.manager_id
     WHERE $where
     ORDER BY p.created_at DESC
 ");
-$stmt->execute($params);
+$params_all = array_merge([$cid, $cid, $cid], $params);
+$stmt->execute($params_all);
 $projects = $stmt->fetchAll();
 
-// Fetch all users for manager dropdown
-$all_users  = $db->query("SELECT id, name, role FROM users WHERE is_active=1 ORDER BY name")->fetchAll();
-$workspaces = $db->query("SELECT * FROM workspaces ORDER BY name")->fetchAll();
+$managers_stmt = $db->prepare("SELECT id, name FROM users WHERE company_id = ? AND is_active = 1 ORDER BY name");
+$managers_stmt->execute([$cid]);
+$all_users = $managers_stmt->fetchAll();
+
+$ws_stmt = $db->prepare("SELECT * FROM workspaces WHERE company_id = ? ORDER BY name");
+$ws_stmt->execute([$cid]);
+$workspaces = $ws_stmt->fetchAll();
 
 $status_colors   = ['planning'=>'info','active'=>'primary','on_hold'=>'warning','completed'=>'success','cancelled'=>'danger'];
 $priority_colors = ['low'=>'success','medium'=>'info','high'=>'warning','critical'=>'danger'];
