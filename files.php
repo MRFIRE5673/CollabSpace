@@ -468,6 +468,5 @@ if (dropzone) {
 }
 </script>
 JS;
-</main>
-<?php include __DIR__ . '/includes/footer.php'; ?>
+include __DIR__ . '/includes/footer.php';
 ?>
