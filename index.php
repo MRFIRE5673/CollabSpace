@@ -237,7 +237,7 @@ try {
     <div class="hero-glow-1"></div>
     <div class="container position-relative" style="z-index: 1;">
       <div class="hero-badge">
-        <span class="online-dot"></span> Real-Time Collaboration Workspace v2.0
+        <span class="online-dot"></span> Real-Time Collaboration Workspace
       </div>
       <h1 class="hero-headline">
         Where Teams Connect, <span>Collaborate</span> & Deliver Faster.

@@ -8,11 +8,10 @@ require_once __DIR__ . '/database.php';
 
 function setupDatabase(): void {
     $db = getDB();
-    $driver = DB_DRIVER;
 
-    // Helper for driver-specific AUTO INCREMENT / TIMESTAMP
-    $pk = ($driver === 'pgsql') ? "SERIAL PRIMARY KEY" : "INT AUTO_INCREMENT PRIMARY KEY";
-    $dt = ($driver === 'pgsql') ? "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP" : "DATETIME DEFAULT CURRENT_TIMESTAMP";
+    // PostgreSQL Primary Key and Timestamp definitions
+    $pk = "SERIAL PRIMARY KEY";
+    $dt = "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP";
 
     // 1. Companies Table
     $db->exec("CREATE TABLE IF NOT EXISTS companies (
@@ -232,15 +231,30 @@ function seedData(PDO $db): void {
             (3, 1, 'approved', 2)");
 
         echo "✅ Seeded default company, Super Admin (superadmin@collabspace.com), Company Admin (admin@admin.com), and Member user.\n";
+        // Advance PostgreSQL sequences to prevent duplicate key errors on future inserts
+        @$db->exec("SELECT setval(pg_get_serial_sequence('companies', 'id'), COALESCE((SELECT MAX(id) FROM companies), 1))");
+        @$db->exec("SELECT setval(pg_get_serial_sequence('users', 'id'), COALESCE((SELECT MAX(id) FROM users), 1))");
+        @$db->exec("SELECT setval(pg_get_serial_sequence('company_members', 'id'), COALESCE((SELECT MAX(id) FROM company_members), 1))");
+        @$db->exec("SELECT setval(pg_get_serial_sequence('login_approval_requests', 'id'), COALESCE((SELECT MAX(id) FROM login_approval_requests), 1))");
     }
 }
 
-// Standalone execution
-if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'setup.php') {
+// Standalone execution via CLI or direct browser URL (/config/setup.php)
+$is_cli_setup = (php_sapi_name() === 'cli' && basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'setup.php');
+$is_web_setup = (isset($_SERVER['REQUEST_URI']) && str_contains($_SERVER['REQUEST_URI'], 'setup.php'));
+
+if ($is_cli_setup || $is_web_setup) {
     try {
         setupDatabase();
+        if (!$is_cli_setup) {
+            echo "<div style='font-family:sans-serif;max-width:550px;margin:50px auto;padding:30px;background:#f0fdf4;border:1px solid #86efac;border-radius:12px;text-align:center;'>";
+            echo "<h2 style='color:#15803d;margin-top:0;'>CollabSpace Database Initialized!</h2>";
+            echo "<p style='color:#374151;'>Default accounts created successfully:</p>";
+            echo "<p style='color:#1f2937;font-family:monospace;background:#dcfce7;padding:10px;border-radius:6px;'>superadmin@collabspace.com &bull; admin@admin.com<br>Password: <b>12345678</b></p>";
+            echo "<a href='/login.php' style='display:inline-block;padding:10px 24px;background:#4f46e5;color:white;text-decoration:none;border-radius:8px;font-weight:600;margin-top:12px;'>Go to Login &rarr;</a>";
+            echo "</div>";
+        }
     } catch (Exception $e) {
-        echo "❌ Error: " . $e->getMessage() . "\n";
+        echo "Error: " . $e->getMessage() . "\n";
     }
 }
-

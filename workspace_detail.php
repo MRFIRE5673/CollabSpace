@@ -55,7 +55,7 @@ $members_stmt->execute([$wid]);
 $members = $members_stmt->fetchAll();
 
 // All users (for project manager dropdown)
-$all_users = $db->prepare("SELECT u.id, u.name FROM users u JOIN company_members cm ON cm.user_id = u.id WHERE cm.company_id = ? AND cm.is_active = 1 AND u.is_active = 1 ORDER BY u.name");
+$all_users = $db->prepare("SELECT u.id, u.name FROM users u JOIN company_members cm ON cm.user_id = u.id WHERE cm.company_id = ? AND u.is_active = 1 ORDER BY u.name");
 $all_users->execute([$cid]);
 $all_users = $all_users->fetchAll();
 

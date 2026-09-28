@@ -4,7 +4,7 @@
 - Inspected repository baseline, routes, pages, APIs, database schema, role hierarchy, file storage, session engine, and public/private endpoints.
 
 ## Phase 2 — Database Engine and Multi-Tenant Schema [COMPLETED]
-- Built multi-driver configuration supporting PostgreSQL (`pdo_pgsql`), MySQL (`pdo_mysql`), and SQLite local dev fallback.
+- Standardized on dedicated PostgreSQL (`pdo_pgsql`) supporting Supabase, Neon, Render, Railway, with IPv4 pooler auto-routing and auto-schema initialization.
 - Created `companies`, `company_members`, `login_approval_requests`, `workspaces`, `workspace_members`, `projects`, `project_members`, `tasks`, `chats`, `files`, `notifications`, `activity_logs`, `user_contacts` tables with foreign key constraints.
 
 ## Phase 3 — Identity and Tenant Context [COMPLETED]

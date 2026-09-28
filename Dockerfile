@@ -2,10 +2,10 @@
 FROM php:8.2-fpm-alpine
 
 # Install nginx + gettext (envsubst) + tools
-RUN apk add --no-cache nginx gettext curl zip unzip libzip-dev dos2unix netcat-openbsd
+RUN apk add --no-cache nginx gettext curl zip unzip libzip-dev dos2unix netcat-openbsd postgresql-dev libpq
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_mysql zip
+RUN docker-php-ext-install pdo pdo_pgsql zip
 
 # PHP production settings & FPM pool tuning
 RUN printf "upload_max_filesize = 20M\npost_max_size = 22M\nmax_execution_time = 60\nmemory_limit = 128M\n" \

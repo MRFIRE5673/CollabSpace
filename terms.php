@@ -70,7 +70,7 @@ if ($isLoggedIn) {
 
       <section class="mb-4">
         <h2 class="h5 fw-bold text-primary mb-3">4. System Availability & Disclaimers</h2>
-        <p>The platform is provided "as is" and "as available". While multi-driver database redundancy (PostgreSQL / MySQL) and automatic fallback mechanisms are employed, CollabSpace disclaims liability for unintended service interruptions resulting from underlying server outages.</p>
+        <p>The platform is provided "as is" and "as available". While multi-driver database redundancy (PostgreSQL / Supabase / Neon) and automatic fallback mechanisms are employed, CollabSpace disclaims liability for unintended service interruptions resulting from underlying server outages.</p>
       </section>
 
       <section class="mb-0">

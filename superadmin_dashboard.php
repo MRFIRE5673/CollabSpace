@@ -52,7 +52,7 @@ include __DIR__ . '/includes/navbar.php';
 include __DIR__ . '/includes/sidebar.php';
 ?>
 
-<main class="app-main p-3 p-md-4">
+<div class="app-content p-3 p-md-4">
   <!-- Title Header -->
   <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom flex-wrap gap-2">
     <div>
@@ -282,6 +282,7 @@ include __DIR__ . '/includes/sidebar.php';
       </div>
     </div>
   </div>
+</div>
 </main>
 
 <!-- Modal: Create Company -->

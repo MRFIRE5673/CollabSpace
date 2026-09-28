@@ -116,3 +116,10 @@ For implementation decisions use:
 9. agent-compliance-addendum.md
 
 When documentation conflicts with actual code, inspect the repository and update documentation to match the intended final architecture rather than inventing behavior.
+
+## Database & Cloud Hosting
+- Primary Database: PostgreSQL 16 (`pdo_pgsql`) on Supabase / Neon / Render / Railway
+- Hosted at: Vercel (`collabspace1.vercel.app`) using serverless PHP runtime (`vercel-php@0.7.3`)
+- Pooler Support: Automatic IPv4 pooler routing (`aws-0-[region].pooler.supabase.com`) with emulated prepares enabled
+- Schema Initialization: Automated schema and seed creation on first connection
+- Default Credentials: `superadmin@collabspace.com`, `admin@admin.com`, `member@admin.com` (password: `12345678`)

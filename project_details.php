@@ -143,15 +143,19 @@ include __DIR__ . '/includes/header.php';
       </div>
     </div>
 
-    <!-- Tabs -->
-    <ul class="nav nav-tabs mb-4" id="project-tabs">
-      <li class="nav-item"><a class="nav-link <?= $active_tab==='board'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=board" id="tab-board"><i class="bi bi-kanban me-1"></i>Task Board</a></li>
-      <li class="nav-item"><a class="nav-link <?= $active_tab==='chat'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=chat" id="tab-chat"><i class="bi bi-chat-dots me-1"></i>Chat</a></li>
-      <li class="nav-item"><a class="nav-link <?= $active_tab==='files'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=files" id="tab-files"><i class="bi bi-folder2-open me-1"></i>Files</a></li>
-      <li class="nav-item"><a class="nav-link <?= $active_tab==='members'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=members" id="tab-members"><i class="bi bi-people me-1"></i>Members</a></li>
-      <li class="nav-item"><a class="nav-link <?= $active_tab==='analytics'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=analytics" id="tab-analytics"><i class="bi bi-graph-up-arrow me-1"></i>Analytics</a></li>
-      <li class="nav-item"><a class="nav-link <?= $active_tab==='activity'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=activity" id="tab-activity"><i class="bi bi-activity me-1"></i>Activity</a></li>
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4" id="project-tabs" role="tablist">
+      <li class="nav-item" role="presentation"><a class="nav-link <?= $active_tab==='board'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=board" id="tab-board" role="tab"><i class="bi bi-kanban me-1"></i>Task Board</a></li>
+      <li class="nav-item" role="presentation"><a class="nav-link <?= $active_tab==='chat'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=chat" id="tab-chat" role="tab"><i class="bi bi-chat-dots me-1"></i>Chat</a></li>
+      <li class="nav-item" role="presentation"><a class="nav-link <?= $active_tab==='files'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=files" id="tab-files" role="tab"><i class="bi bi-folder2-open me-1"></i>Files</a></li>
+      <li class="nav-item" role="presentation"><a class="nav-link <?= $active_tab==='members'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=members" id="tab-members" role="tab"><i class="bi bi-people me-1"></i>Members</a></li>
+      <li class="nav-item" role="presentation"><a class="nav-link <?= $active_tab==='analytics'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=analytics" id="tab-analytics" role="tab"><i class="bi bi-graph-up-arrow me-1"></i>Analytics</a></li>
+      <li class="nav-item" role="presentation"><a class="nav-link <?= $active_tab==='activity'?'active':'' ?>" href="?id=<?= $project_id ?>&tab=activity" id="tab-activity" role="tab"><i class="bi bi-activity me-1"></i>Activity</a></li>
     </ul>
+
+    <!-- Tabs Content Container -->
+    <div class="tab-content" id="project-tabs-content">
+      <div class="tab-pane fade show active" role="tabpanel">
 
     <!-- ─── BOARD TAB ─────────────────────────────────────── -->
     <?php if ($active_tab === 'board'): ?>
@@ -521,6 +525,8 @@ include __DIR__ . '/includes/header.php';
     <?php endforeach; ?>
     <?php endif; ?>
     <?php endif; ?>
+      </div>
+    </div>
 
   </div>
 </main>

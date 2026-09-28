@@ -50,7 +50,7 @@ foreach ($all_tasks as $t) {
     $kanban_cols[$t['status']][] = $t;
 }
 
-$all_users_stmt = $db->prepare("SELECT u.id, u.name FROM users u JOIN company_members cm ON cm.user_id = u.id WHERE cm.company_id = ? AND cm.is_active = 1 AND u.is_active = 1 ORDER BY u.name");
+$all_users_stmt = $db->prepare("SELECT u.id, u.name FROM users u JOIN company_members cm ON cm.user_id = u.id WHERE cm.company_id = ? AND u.is_active = 1 ORDER BY u.name");
 $all_users_stmt->execute([$cid]);
 $all_users = $all_users_stmt->fetchAll();
 $selected_project = '';

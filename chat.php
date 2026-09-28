@@ -26,7 +26,7 @@ $stmt = $db->prepare("
     FROM user_contacts uc
     JOIN users u ON u.id = uc.contact_id
     JOIN company_members cm ON cm.user_id = u.id
-    WHERE uc.user_id = ? AND cm.company_id = ? AND cm.is_active = 1 AND u.is_active = 1
+    WHERE uc.user_id = ? AND cm.company_id = ? AND u.is_active = 1
     ORDER BY u.status DESC, u.name ASC
 ");
 $stmt->execute([$uid, $cid]);

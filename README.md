@@ -2,11 +2,11 @@
 
 # ?? CollabSpace
 
-**A real-time team collaboration platform built with PHP, MySQL & JavaScript**
+**A real-time team collaboration platform built with PHP, PostgreSQL & JavaScript**
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Railway-blueviolet?style=for-the-badge&logo=railway)](https://collabspace-production-430b.up.railway.app)
 [![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://mysql.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-7952B3?style=for-the-badge&logo=bootstrap&logoColor=white)](https://getbootstrap.com)
 [![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 
@@ -21,22 +21,22 @@
 ## Features
 
 ### Team & Access Management
-- **Role-Based Access Control (RBAC)** — 4 roles: Admin, Manager, Member, Viewer
+- **Role-Based Access Control (RBAC)**  4 roles: Admin, Manager, Member, Viewer
 - bcrypt-hashed authentication, profile management, online presence
 
 ### Project & Task Management
 - Projects with member assignments
-- **Kanban task board** — drag tasks across To Do / In Progress / Done
+- **Kanban task board**  drag tasks across To Do / In Progress / Done
 - Task priorities, due dates, assignee tracking
 
 ### Real-Time Communication
 - **Live team chat** with file attachments
-- **Cross-device document sync** — edits appear on all connected devices within 800ms
+- **Cross-device document sync**  edits appear on all connected devices within 800ms
 - Real-time notifications
 
 ### File Management
 - Upload any file type (images, PDFs, Office docs, videos)
-- **In-browser file viewer** — images, PDFs, videos without downloading
+- **In-browser file viewer**  images, PDFs, videos without downloading
 - **Interactive editors** for Word (.docx), Excel (.xlsx), PowerPoint (.pptx)
 - Live collaborative editing with auto-save
 
@@ -52,7 +52,7 @@
 | Layer | Technology |
 |-------|-----------|
 | Backend | PHP 8.2 |
-| Database | MySQL 8.0 with PDO |
+| Database | PostgreSQL 16 (Supabase / Neon / Railway) with PDO (pdo_pgsql) |
 | Frontend | Bootstrap 5.3, Vanilla JavaScript |
 | Icons | Bootstrap Icons |
 | File Parsing | Mammoth.js (Word), SheetJS (Excel) |
@@ -73,7 +73,7 @@ Browser (HTML + JS)
   |- API (/api/*.php)  <-- return JSON
        |
        v
-  MySQL Database
+  PostgreSQL Database
 ```
 
 **Real-Time Sync:**
@@ -107,7 +107,7 @@ activity_logs   -> id, user_id, action, details, created_at
 ## Getting Started
 
 ### Prerequisites
-- PHP 8.0+, MySQL 8.0+, Apache with mod_rewrite (or XAMPP)
+- PHP 8.0+, PostgreSQL 15+ (or Supabase / Neon), Apache with mod_rewrite (or XAMPP)
 
 ### Local Setup
 
@@ -138,7 +138,7 @@ docker-compose up --build
 
 1. Fork this repo
 2. Create project on [Railway](https://railway.app) and connect GitHub
-3. Add MySQL plugin
+3. Add PostgreSQL plugin
 4. Set environment variables: `DB_HOST`, `DB_USER`, `DB_PASS`, `DB_NAME`, `APP_URL`
 5. Railway auto-detects Dockerfile and deploys
 
@@ -160,17 +160,17 @@ docker-compose up --build
 ```
 CollabSpace/
 +-- api/                 # AJAX endpoints (return JSON)
-¦   +-- documents.php    # Real-time document sync
-¦   +-- files.php        # File upload/delete/rename
-¦   +-- tasks.php        # Task CRUD + Kanban
-¦   +-- chat.php         # Chat send/fetch
+   +-- documents.php    # Real-time document sync
+   +-- files.php        # File upload/delete/rename
+   +-- tasks.php        # Task CRUD + Kanban
+   +-- chat.php         # Chat send/fetch
 +-- config/
-¦   +-- database.php     # PDO singleton + env config
-¦   +-- setup.php        # DB schema auto-setup
+   +-- database.php     # PDO singleton + env config
+   +-- setup.php        # DB schema auto-setup
 +-- includes/
-¦   +-- auth.php         # RBAC + session helpers
-¦   +-- sidebar.php      # Navigation
-¦   +-- header.php       # HTML head
+   +-- auth.php         # RBAC + session helpers
+   +-- sidebar.php      # Navigation
+   +-- header.php       # HTML head
 +-- css/custom.css       # Design system
 +-- uploads/             # User files (gitignored)
 +-- dashboard.php        # Admin dashboard

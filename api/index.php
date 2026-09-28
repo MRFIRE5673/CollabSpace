@@ -1,22 +1,32 @@
 <?php
-// ─── Vercel Serverless PHP Router ──────────────────────────────
-$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+// --- Master Vercel Serverless PHP Router ----------------------
+$uri = parse_url($_SERVER["REQUEST_URI"] ?? "/", PHP_URL_PATH);
 
-if ($uri === '/' || $uri === '' || $uri === '/index.php') {
-    require __DIR__ . '/../index.php';
+if ($uri === "/" || $uri === "" || $uri === "/index.php") {
+    require __DIR__ . "/../index.php";
     exit;
 }
 
-$target = __DIR__ . '/..' . $uri;
+$cleanUri = ltrim($uri, "/");
+
+if (str_starts_with($cleanUri, "api/")) {
+    $apiFile = __DIR__ . "/../" . $cleanUri;
+    if (file_exists($apiFile) && !is_dir($apiFile)) {
+        require $apiFile;
+        exit;
+    }
+}
+
+$target = __DIR__ . "/../" . $cleanUri;
 if (file_exists($target) && !is_dir($target)) {
     require $target;
     exit;
 }
 
-if (file_exists($target . '.php')) {
-    require $target . '.php';
+if (file_exists($target . ".php")) {
+    require $target . ".php";
     exit;
 }
 
-// Fallback to 404
-require __DIR__ . '/../404.php';
+require __DIR__ . "/../404.php";
+

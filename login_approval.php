@@ -72,7 +72,7 @@ include __DIR__ . '/includes/navbar.php';
 include __DIR__ . '/includes/sidebar.php';
 ?>
 
-<main class="app-main p-3 p-md-4">
+<div class="app-content p-3 p-md-4">
   <div class="d-flex align-items-center justify-content-between mb-4 pb-2 border-bottom flex-wrap gap-2">
     <div>
       <span class="badge bg-warning text-dark text-uppercase letter-spacing-1 mb-1">Company Security</span>
@@ -188,6 +188,7 @@ include __DIR__ . '/includes/sidebar.php';
       </div>
     </div>
   </div>
+</div>
 </main>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -102,10 +102,10 @@ include __DIR__ . '/includes/header.php';
     <!-- Stats -->
     <div class="row g-3 mb-4">
       <?php
-        $admin_count   = $db->prepare("SELECT COUNT(*) FROM company_members WHERE company_id=? AND role IN ('company_admin','admin') AND is_active=1"); $admin_count->execute([$cid]); $admin_count = $admin_count->fetchColumn();
-        $manager_count = $db->prepare("SELECT COUNT(*) FROM company_members WHERE company_id=? AND role IN ('manager','project_manager') AND is_active=1"); $manager_count->execute([$cid]); $manager_count = $manager_count->fetchColumn();
-        $member_count  = $db->prepare("SELECT COUNT(*) FROM company_members WHERE company_id=? AND role IN ('member','team_lead','viewer') AND is_active=1"); $member_count->execute([$cid]); $member_count = $member_count->fetchColumn();
-        $inactive_count = $db->prepare("SELECT COUNT(*) FROM company_members WHERE company_id=? AND is_active=0"); $inactive_count->execute([$cid]); $inactive_count = $inactive_count->fetchColumn();
+        $admin_count   = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id=? AND role IN ('company_admin','admin') AND is_active=1"); $admin_count->execute([$cid]); $admin_count = $admin_count->fetchColumn();
+        $manager_count = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id=? AND role IN ('manager','project_manager') AND is_active=1"); $manager_count->execute([$cid]); $manager_count = $manager_count->fetchColumn();
+        $member_count  = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id=? AND role IN ('member','team_lead','viewer') AND is_active=1"); $member_count->execute([$cid]); $member_count = $member_count->fetchColumn();
+        $inactive_count = $db->prepare("SELECT COUNT(*) FROM users WHERE company_id=? AND is_active=0"); $inactive_count->execute([$cid]); $inactive_count = $inactive_count->fetchColumn();
       ?>
       <div class="col-6 col-lg-3">
         <div class="card stat-card text-white" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">

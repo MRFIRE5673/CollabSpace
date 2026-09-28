@@ -9,8 +9,9 @@ services:
     ports:
       - "8080:80"
     environment:
+      DB_DRIVER: pgsql
       DB_HOST: db
-      DB_PORT: 3306
+      DB_PORT: 5432
       DB_NAME: collab_workspace
       DB_USER: collabuser
       DB_PASS: collabpass
@@ -24,20 +25,20 @@ services:
     restart: unless-stopped
 
   db:
-    image: mysql:8.0
+    image: postgres:16-alpine
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
-      MYSQL_DATABASE: collab_workspace
-      MYSQL_USER: collabuser
-      MYSQL_PASSWORD: collabpass
+      POSTGRES_DB: collab_workspace
+      POSTGRES_USER: collabuser
+      POSTGRES_PASSWORD: collabpass
     ports:
-      - "3307:3306"
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      test: ["CMD-SHELL", "pg_isready -U collabuser -d collab_workspace"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 volumes:
